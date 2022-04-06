@@ -4,12 +4,12 @@ from typing import cast, List
 from bdbt.abi.abi_type import ABI, ABIElement
 
 
-def normalize_abi(abi_json_str: str) -> ABI:
+def normalize_abi(abi_json: str) -> ABI:
     """
     Convert a json ABI string to an :class:`ABI` object which uses TypedDict
     """
-    abi_json_str = json.loads(abi_json_str)
-    return cast(ABI, abi_json_str)
+    abi_json = json.loads(abi_json)
+    return cast(ABI, abi_json)
 
 
 def filter_by_type(type_str: str, contract_abi: ABI) -> List[ABIElement]:

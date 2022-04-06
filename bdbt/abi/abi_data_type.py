@@ -4,8 +4,12 @@ from typing import (
     Optional,
     List,
     Dict,
-    TypedDict,
 )
+
+try:
+    from typing import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
 
 from bdbt.exceptions import ABITypeNotValid
 

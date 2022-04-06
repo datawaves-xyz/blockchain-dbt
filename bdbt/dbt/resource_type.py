@@ -1,4 +1,9 @@
-from typing import TypedDict, Sequence
+from typing import Sequence
+
+try:
+    from typing import TypedDict
+except ImportError:
+    from typing_extensions import TypedDict
 
 
 class DbtMeta(TypedDict, total=False):

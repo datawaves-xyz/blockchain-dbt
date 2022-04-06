@@ -1,10 +1,13 @@
 from typing import (
     Sequence,
-    Literal,
     Union,
-    Optional,
-    TypedDict
+    Optional
 )
+
+try:
+    from typing import TypedDict, Literal
+except ImportError:
+    from typing_extensions import TypedDict, Literal
 
 
 # event
