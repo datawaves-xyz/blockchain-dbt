@@ -1,5 +1,5 @@
 import re
-from typing import Generic, List, Dict, TypeVar
+from typing import List, Dict, TypeVar, Generic
 
 from bdbt.abi.abi_data_type import (
     ABIDataType,
@@ -15,8 +15,7 @@ from bdbt.abi.abi_data_type import (
     ABITupleType,
     ABIEventSchema,
     ABICallSchema,
-    EventSchema,
-    CallSchema
+    ABISchema
 )
 from bdbt.abi.abi_type import (
     ABIEventElement,
@@ -25,55 +24,54 @@ from bdbt.abi.abi_type import (
     ABICall,
     ABICallElement
 )
-from bdbt.abi.utils import filter_by_type_and_name
+from bdbt.abi.utils import filter_by_type_and_name, filter_by_type
 from bdbt.exceptions import TargetItemNotFound
-from bdbt.provider.data_type_provider import DataTypeProvider
 
 T = TypeVar('T')
 
 
 class ABITransformer(Generic[T]):
-    abi_types: List[ABIDataType] = [
-        ABIIntType(bit_length=256, unsigned=False, name='int'),
-        ABIIntType(bit_length=256, unsigned=True, name='uint'),
-        ABIAddressType(),
-        ABIBoolType(),
-        ABIFixedType(bit_length=128, scale=18, unsigned=False, name='fixed'),
-        ABIFixedType(bit_length=128, scale=18, unsigned=True, name='ufixed'),
-        ABIBytesType(name='bytes'),
-        ABIFunctionType(),
-        ABIStringType()
-    ]
+    abi_type_mapping: Dict[str, ABIDataType] = {}
 
     for i in range(8, 257, 8):
-        abi_types.append(ABIIntType(bit_length=i, unsigned=False, name=f'int{i}'))
-        abi_types.append(ABIIntType(bit_length=i, unsigned=True, name=f'uint{i}'))
+        abi_type_mapping[f'int{i}'] = ABIIntType(bit_length=i, unsigned=False)
+        abi_type_mapping[f'uint{i}'] = ABIIntType(bit_length=i, unsigned=True)
 
         for j in range(1, 81):
-            abi_types.append(ABIFixedType(bit_length=i, scale=j, unsigned=False, name=f'fixed{i}x{j}'))
-            abi_types.append(ABIFixedType(bit_length=i, scale=j, unsigned=True, name=f'ufixed{i}x{j}'))
+            abi_type_mapping[f'fixed{i}x{j}'] = ABIFixedType(bit_length=i, scale=j, unsigned=False)
+            abi_type_mapping[f'ufixed{i}x{j}'] = ABIFixedType(bit_length=i, scale=j, unsigned=True)
 
     for i in range(1, 33):
-        abi_types.append(ABIBytesType(length=i, name=f'bytes{i}'))
+        abi_type_mapping[f'bytes{i}'] = ABIBytesType(length=i, dynamic=False)
 
-    abi_type_mapping: Dict[str, ABIDataType] = {i.name: i for i in abi_types}
-
-    def __init__(self, provider: DataTypeProvider[T]):
-        self.provider = provider
+    abi_type_mapping['int'] = abi_type_mapping['int256']
+    abi_type_mapping['uint'] = abi_type_mapping['uint256']
+    abi_type_mapping['fixed'] = abi_type_mapping['fixed128x18']
+    abi_type_mapping['ufixed'] = abi_type_mapping['ufixed128x18']
+    abi_type_mapping['address'] = ABIAddressType()
+    abi_type_mapping['bool'] = ABIBoolType()
+    abi_type_mapping['bytes'] = ABIBytesType(length=32, dynamic=True)
+    abi_type_mapping['function'] = ABIFunctionType()
+    abi_type_mapping['string'] = ABIStringType()
 
     def _transform_event_element(self, event_element: ABIEventElement) -> ABIField:
-        name = event_element['name']
-        atype_str = event_element['type']
-        indexed = event_element['indexed']
+        name = event_element.get('name')
+        atype_str = event_element.get('type')
+        indexed = event_element.get('indexed')
 
         arr_reg = re.search(r'\[[\d]*\]$', atype_str)
 
         if arr_reg:
             element_type_str = atype_str[:arr_reg.start()]
+            element_type = self.abi_type_mapping[element_type_str]
             arr_length = int(atype_str[arr_reg.start() + 1: arr_reg.end()])
             return ABIField(
                 name=name,
-                ftype=ABIArrayType(element_type=self.abi_type_mapping[element_type_str], length=arr_length),
+                ftype=ABIArrayType(
+                    element_type=element_type,
+                    length=arr_length,
+                    canonical_type=f'{element_type.canonical_type}[{arr_length}]'
+                ),
                 metadata={'indexed': indexed}
             )
         else:
@@ -97,10 +95,15 @@ class ABITransformer(Generic[T]):
             )
         elif arr_reg:
             element_type_str = atype_str[:arr_reg.start()]
+            element_type = self.abi_type_mapping[element_type_str]
             arr_length = int(atype_str[arr_reg.start() + 1: arr_reg.end() - 1])
             return ABIField(
                 name=name,
-                ftype=ABIArrayType(element_type=self.abi_type_mapping[element_type_str], length=arr_length),
+                ftype=ABIArrayType(
+                    element_type=element_type,
+                    length=arr_length,
+                    canonical_type=f'{element_type.canonical_type}[{arr_length}]'
+                ),
             )
         else:
             return ABIField(
@@ -114,7 +117,10 @@ class ABITransformer(Generic[T]):
             raise TargetItemNotFound(f"{event_name} event can not be found in ABI")
 
         event = candidate_events[0]
-        return ABIEventSchema(inputs=[self._transform_event_element(i) for i in event.get('inputs', [])])
+        return ABIEventSchema(
+            name=event.get('name'),
+            inputs=[self._transform_event_element(i) for i in event.get('inputs', [])]
+        )
 
     def transform_abi_call(self, abi: ABI, call_name: str) -> ABICallSchema:
         candidate_calls: List[ABICall] = filter_by_type_and_name(name=call_name, type_str='function', contract_abi=abi)
@@ -123,28 +129,15 @@ class ABITransformer(Generic[T]):
 
         call = candidate_calls[0]
         return ABICallSchema(
+            name=call.get('name'),
             inputs=[self._transform_call_element(i) for i in call.get('inputs', [])],
             outputs=[self._transform_call_element(i) for i in call.get('outputs', [])]
         )
 
-    def transform_to_event_schema(self, abi_event: ABIEventSchema) -> EventSchema[T]:
-        return EventSchema(inputs=[ABIField(
-            name=i.name,
-            ftype=self.provider.transform(i.ftype),
-            metadata=i.metadata
-        ) for i in abi_event['inputs']])
+    def transform_abi(self, abi: ABI) -> ABISchema:
+        event_abi_list = filter_by_type(type_str='event', contract_abi=abi)
+        call_abi_list = filter_by_type(type_str='function', contract_abi=abi)
 
-    def transform_to_call_schema(self, abi_call: ABICallSchema) -> CallSchema[T]:
-        return CallSchema(
-            inputs=[ABIField(
-                name=i.name,
-                ftype=self.provider.transform(i.ftype),
-                metadata=i.metadata
-            ) for i in abi_call['inputs']],
-
-            outputs=[ABIField(
-                name=i.name,
-                ftype=self.provider.transform(i.ftype),
-                metadata=i.metadata
-            ) for i in abi_call['outputs']]
-        )
+        events = [self.transform_abi_event(abi, i['name']) for i in event_abi_list]
+        calls = [self.transform_abi_call(abi, i['name']) for i in call_abi_list]
+        return ABISchema(events=events, calls=calls)

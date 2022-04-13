@@ -1,5 +1,5 @@
 import math
-from typing import Union, List, Dict
+from typing import Union
 
 from pyspark.sql.types import (
     DataType,
@@ -23,20 +23,14 @@ from bdbt.abi.abi_data_type import (
     ABIStringType,
     ABIIntType,
     ABITupleType,
-    ABIArrayType,
-    EventSchema,
-    ABIField
+    ABIArrayType
 )
-from bdbt.dbt.resource_type import DbtModel, DbtColumn, DbtMeta, DbtTable, DbtSource
 from bdbt.provider.data_type_provider import DataTypeProvider
 
 
 class SparkDataTypeProvider(DataTypeProvider[DataType]):
 
-    def get_type_name(self, data_type: DataType) -> str:
-        return data_type.jsonValue()
-
-    def transform_from_array_type(self, atype: ABIArrayType) -> ArrayType:
+    def transform_from_array_type(self, atype: ABIArrayType, deep: int = 0) -> ArrayType:
         return ArrayType(elementType=self.transform(atype.element_type))
 
     def transform_from_tuple_type(self, atype: ABITupleType) -> StructType:
@@ -80,39 +74,3 @@ class SparkDataTypeProvider(DataTypeProvider[DataType]):
 
     def transform_from_function_type(self, atype: ABIFunctionType) -> BinaryType:
         return BinaryType()
-
-
-SparkField = ABIField[DataType]
-
-
-class SparkEventSchema(EventSchema[DataType]):
-    def __init__(self, inputs: List[SparkField]):
-        super(SparkEventSchema, self).__init__(inputs)
-
-    def to_dbt_model(self, contract_name: str, event_name: str) -> DbtModel:
-        return DbtModel(
-            name=f"{contract_name}_evt_{event_name}",
-            columns=[self.field_to_dbt_column(i) for i in self.inputs]
-        )
-
-    def to_dbt_table(self, name: str) -> DbtTable:
-        return DbtTable(
-            name=name,
-            columns=[self.field_to_dbt_column(i) for i in self.inputs]
-        )
-
-    @staticmethod
-    def field_to_dbt_column(field: SparkField) -> DbtColumn:
-        return DbtColumn(name=field.name, meta=DbtMeta(type=field.ftype.typeName()))
-
-    @staticmethod
-    def to_dbt_source(
-            event_map: Dict[str, 'SparkEventSchema'],
-            contract_name: str,
-            database_name: str
-    ) -> DbtSource:
-        return DbtSource(
-            name=database_name,
-            tables=[schema.to_dbt_table(f"{contract_name}_evt_{event_name}")
-                    for event_name, schema in event_map.items()]
-        )

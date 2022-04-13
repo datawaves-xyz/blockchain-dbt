@@ -1,24 +1,15 @@
-from typing import Generic, TypeVar
-
 from bdbt.abi.abi_data_type import EventSchema, CallSchema, ABIField
-from bdbt.dbt.resource_type import DbtModel, DbtColumn, DbtMeta
-
-T = TypeVar('T')
+from bdbt.dbt.resource_type import DbtModel, DbtColumn
 
 
 class DbtTransformer:
-    def __init__(self, provider: Generic[T]):
-        self.provider = provider
-
-    def field_to_column(self, field: ABIField[T]) -> DbtColumn:
-        return DbtColumn(
-            name=field.name,
-            meta=DbtMeta(type=self.provider.get_type_name(field.ftype))
-        )
+    @staticmethod
+    def field_to_column(field: ABIField) -> DbtColumn:
+        return DbtColumn(name=field.name)
 
     def event_schema_to_model(
             self,
-            event: EventSchema[T],
+            event: EventSchema,
             contract_name: str,
             event_name: str
     ) -> DbtModel:
@@ -29,7 +20,7 @@ class DbtTransformer:
 
     def call_schema_to_model(
             self,
-            call: CallSchema[T],
+            call: CallSchema,
             contract_name: str,
             call_name: str,
             inputs: bool = True

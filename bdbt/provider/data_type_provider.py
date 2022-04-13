@@ -64,6 +64,3 @@ class DataTypeProvider(Generic[T]):
 
     def transform_from_tuple_type(self, atype: ABITupleType) -> T:
         raise NotImplementedError()
-
-    def get_type_name(self, data_type: T) -> str:
-        raise NotImplementedError()
