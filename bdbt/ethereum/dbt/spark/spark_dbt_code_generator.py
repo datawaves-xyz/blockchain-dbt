@@ -320,14 +320,10 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
     def prepare_udf_workspace(self, project_path: str) -> str:
         # clone blockchain-spark project and move java dir to the root
         # TODO: release blockchain-spark project to maven central
-        # TODO: use master branch if the pr is merged
         self._execute_command(
             f"""
             cd {project_path}  \
             && git clone https://github.com/datawaves-xyz/blockchain-spark.git \
-            && cd blockchain-spark \
-            && git checkout hive-udf \
-            && cd {project_path} \
             && mv blockchain-spark/java java \
             && rm -rf blockchain-spark
             """
