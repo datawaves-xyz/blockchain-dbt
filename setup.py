@@ -32,7 +32,8 @@ setup(
     keywords='blockchain, dbt',
     python_requires='>=3.6,<4',
     install_requires=[
-        'pyaml==21.10.1'
+        'pyaml==21.10.1',
+        'eth-utils==1.10.0'
     ],
     extras_require={
         'pyspark': ["pyspark==3.2.1"],

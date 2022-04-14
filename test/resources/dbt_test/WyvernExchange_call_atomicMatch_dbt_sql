@@ -1,0 +1,47 @@
+{{
+    config(
+        materialized='incremental',
+        pre_hook={
+            'sql': 'create function ethereum.wyvernexchangev2_atomicmatch__calldecodeudf as "io.iftech.sparkudf.hive.WyvernExchangeV2_atomicMatch__CallDecodeUDF" using jar "s3a://test/WyvernExchangeV2_atomicMatch__CallDecodeUDF.java";'
+        },
+        post_hook={
+            'sql': 'drop temporary function if exists ethereum.wyvernexchangev2_atomicmatch__calldecodeudf'
+        }
+    )
+}}
+
+with base as (
+    select
+        status==1 as call_success,
+        block_number as call_block_number,
+        block_timestamp as call_block_time,
+        trace_address as call_trace_address,
+        transaction_hash as call_tx_hash,
+        to_address as contract_address,
+        dt,
+        ethereum.decode_call(unhex_input, unhex_output, '{"constant": false, "inputs": [{"name": "addrs", "type": "address[14]"}, {"name": "uints", "type": "uint256[18]"}, {"name": "feeMethodsSidesKindsHowToCalls", "type": "uint8[8]"}, {"name": "calldataBuy", "type": "bytes"}, {"name": "calldataSell", "type": "bytes"}, {"name": "replacementPatternBuy", "type": "bytes"}, {"name": "replacementPatternSell", "type": "bytes"}, {"name": "staticExtradataBuy", "type": "bytes"}, {"name": "staticExtradataSell", "type": "bytes"}, {"name": "vs", "type": "uint8[2]"}, {"name": "rssMetadata", "type": "bytes32[5]"}], "name": "atomicMatch_", "outputs": [], "payable": true, "stateMutability": "payable", "type": "function"}', 'atomicMatch_') as data
+    from ethereum.traces
+    where to_address = lower("0x7f268357a8c2552623316e2562d90e642bb538e5")
+    and substr(traces.input, 1, 10) = "0x30786162383334626162"
+
+    {% if is_incremental() %}
+      and dt = dbt-date.today()
+    {% endif %}
+),
+
+final as (
+    select
+        call_success,
+        call_block_number,
+        call_block_time,
+        call_trace_address,
+        call_tx_hash,
+        contract_address,
+        dt,
+        data.inputs.*,
+        data.output.*
+    from base
+)
+
+select *
+from final

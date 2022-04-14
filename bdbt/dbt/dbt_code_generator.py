@@ -19,7 +19,14 @@ class DbtCodeGenerator:
         with open(filepath, 'w') as f:
             f.write(content)
 
-    def generate_dbt_models(self, workspace: str, project_name: str, contract_name: str, abi: ABISchema):
+    def generate_dbt_models(
+            self,
+            workspace: str,
+            project_name: str,
+            contract_name: str,
+            contract_address: str,
+            abi: ABISchema
+    ):
         """
         Generate some dbt model sql files and schema yaml file,
         one model sql file for one event or call.
@@ -27,12 +34,18 @@ class DbtCodeGenerator:
         project_path = os.path.join(workspace, project_name)
         pathlib.Path(project_path).mkdir(parents=True, exist_ok=False)
 
-        for event in abi['events']:
-            self.generate_event_dbt_model(project_path, contract_name, event)
-        for call in abi['calls']:
-            self.generate_call_dbt_model(project_path, contract_name, call)
+        for event in abi.events:
+            self.generate_event_dbt_model(project_path, contract_name, contract_address, event)
+        for call in abi.calls:
+            self.generate_call_dbt_model(project_path, contract_name, contract_address, call)
 
-    def generate_dbt_udf(self, workspace: str, project_name: str, contract_name: str, abi: ABISchema):
+    def generate_dbt_udf(
+            self,
+            workspace: str,
+            project_name: str,
+            contract_name: str,
+            abi: ABISchema
+    ):
         """
         Generate some UDF file bind with the destination database, the UDF is used to decode contract,
         we can integrate Javascript or Python code with SQL in some database, maybe they needn't define UDF.
@@ -45,17 +58,30 @@ class DbtCodeGenerator:
 
         udf_workspace = self.prepare_udf_workspace(project_path)
 
-        for event in abi['events']:
+        # the empty events and empty calls don't need UDF to decode data
+        for event in abi.nonempty_events:
             self.generate_event_udf(udf_workspace, contract_name, event)
-        for call in abi['calls']:
+        for call in abi.nonempty_calls:
             self.generate_call_udf(udf_workspace, contract_name, call)
 
         self.build_udf(project_path)
 
-    def generate_event_dbt_model(self, project_path: str, contract_name: str, event: ABIEventSchema):
+    def generate_event_dbt_model(
+            self,
+            project_path: str,
+            contract_name: str,
+            contract_address: str,
+            event: ABIEventSchema
+    ):
         raise NotImplementedError()
 
-    def generate_call_dbt_model(self, project_path: str, contract_name: str, call: ABICallSchema):
+    def generate_call_dbt_model(
+            self,
+            project_path: str,
+            contract_name: str,
+            contract_address: str,
+            call: ABICallSchema
+    ):
         raise NotImplementedError()
 
     def generate_event_udf(self, udf_workspace: str, contract_name: str, event: ABIEventSchema):

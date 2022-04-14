@@ -6,7 +6,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
 import org.sparkproject.guava.collect.ImmutableList;
 
-public class WyvernExchangeV2_OrderApprovedPartOneEventDecodeUDF extends DecodeContractEventHiveUDF {
+public class WyvernExchangeV2_OrderApprovedPartOne_EventDecodeUDF extends DecodeContractEventHiveUDF {
 
     @Override
     public List<String> getInputDataFieldsName() {

@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, List
 
 try:
     from typing import TypedDict
@@ -15,11 +15,5 @@ class DbtTable(TypedDict, total=False):
     columns: Sequence[DbtColumn]
 
 
-class DbtSource(TypedDict, total=False):
-    name: str
-    tables: Sequence[DbtTable]
-
-
-class DbtModel(TypedDict, total=False):
-    name: str
-    columns: Sequence[DbtColumn]
+class DbtModelSchema(TypedDict, total=False):
+    models: List[DbtTable]

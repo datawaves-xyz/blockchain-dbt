@@ -6,7 +6,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
 import org.sparkproject.guava.collect.ImmutableList;
 
-public class Test_AllTypeFunctionCallDecodeUDF extends DecodeContractFunctionHiveUDF {
+public class Test_AllTypeFunction_CallDecodeUDF extends DecodeContractFunctionHiveUDF {
 
     @Override
     public List<String> getInputDataFieldsName() {
@@ -43,7 +43,7 @@ PrimitiveObjectInspectorFactory.writableStringObjectInspector)
 
     @Override
     public List<String> getOutputDataFieldsName() {
-        return ImmutableList.of("addrs","uints","feeMethod","side","saleKind","howToCall","calldata","replacementPattern","staticExtradata");
+        return ImmutableList.of("output_addrs","output_uints","output_feeMethod","output_side","output_saleKind","output_howToCall","output_calldata","output_replacementPattern","output_staticExtradata");
     }
 
     @Override

@@ -1,8 +1,11 @@
+from dataclasses import dataclass
 from typing import (
     Optional,
     List,
     Dict,
 )
+
+from bdbt.abi.abi_type import ABIEvent, ABICall
 
 try:
     from typing import TypedDict
@@ -12,13 +15,12 @@ except ImportError:
 from bdbt.exceptions import ABITypeNotValid
 
 
+@dataclass
 class ABIDataType:
     """
     Follow by: https://docs.soliditylang.org/en/v0.8.11/abi-spec.html#types
     """
-
-    def __init__(self, canonical_type: Optional[str]):
-        self.canonical_type = canonical_type
+    canonical_type: Optional[str] = None
 
 
 class ABIIntType(ABIDataType):
@@ -114,24 +116,45 @@ class ABITupleType(ABIDataType):
         self.element_fields.append(field)
 
 
+@dataclass
 class ABIField:
-    def __init__(self, name: str, ftype: ABIDataType, metadata: Optional[Dict[str, any]] = None):
-        self.name = name
-        self.ftype = ftype
-        self.metadata = metadata
+    name: str
+    ftype: ABIDataType
+    metadata: Optional[Dict[str, any]] = None
 
 
-class ABIEventSchema(TypedDict, total=False):
+@dataclass
+class ABIEventSchema:
     name: str
     inputs: List[ABIField]
+    raw_schema: ABIEvent
+
+    @property
+    def is_empty(self):
+        return len(self.inputs) == 0
 
 
-class ABICallSchema(TypedDict, total=False):
+@dataclass
+class ABICallSchema:
     name: str
     inputs: List[ABIField]
     outputs: List[ABIField]
+    raw_schema: ABICall
+
+    @property
+    def is_empty(self):
+        return len(self.inputs) + len(self.outputs) == 0
 
 
-class ABISchema(TypedDict, total=False):
+@dataclass
+class ABISchema:
     events: List[ABIEventSchema]
     calls: List[ABICallSchema]
+
+    @property
+    def nonempty_events(self):
+        return [i for i in self.events if not i.is_empty]
+
+    @property
+    def nonempty_calls(self):
+        return [i for i in self.calls if not i.is_empty]

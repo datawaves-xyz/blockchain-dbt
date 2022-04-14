@@ -1,4 +1,5 @@
 import re
+from copy import deepcopy
 from typing import List, Dict, TypeVar, Generic
 
 from bdbt.abi.abi_data_type import (
@@ -119,7 +120,8 @@ class ABITransformer(Generic[T]):
         event = candidate_events[0]
         return ABIEventSchema(
             name=event.get('name'),
-            inputs=[self._transform_event_element(i) for i in event.get('inputs', [])]
+            inputs=self._revise_fields([self._transform_event_element(i) for i in event.get('inputs', [])]),
+            raw_schema=event
         )
 
     def transform_abi_call(self, abi: ABI, call_name: str) -> ABICallSchema:
@@ -130,8 +132,9 @@ class ABITransformer(Generic[T]):
         call = candidate_calls[0]
         return ABICallSchema(
             name=call.get('name'),
-            inputs=[self._transform_call_element(i) for i in call.get('inputs', [])],
-            outputs=[self._transform_call_element(i) for i in call.get('outputs', [])]
+            inputs=self._revise_fields([self._transform_call_element(i) for i in call.get('inputs', [])]),
+            outputs=self._revise_fields([self._transform_call_element(i) for i in call.get('outputs', [])], 'output'),
+            raw_schema=call
         )
 
     def transform_abi(self, abi: ABI) -> ABISchema:
@@ -141,3 +144,21 @@ class ABITransformer(Generic[T]):
         events = [self.transform_abi_event(abi, i['name']) for i in event_abi_list]
         calls = [self.transform_abi_call(abi, i['name']) for i in call_abi_list]
         return ABISchema(events=events, calls=calls)
+
+    @staticmethod
+    def _revise_fields(fields: List[ABIField], prefix: str = '') -> List[ABIField]:
+        size = len(fields)
+
+        if size == 0:
+            return fields
+
+        revised_fields = []
+        for i in range(0, size):
+            new_field = deepcopy(fields[i])
+            if prefix == '':
+                new_field.name = f'_{i}' if new_field.name == '' else new_field.name
+            else:
+                new_field.name = f'{prefix}_{i}' if new_field.name == '' else f'{prefix}_{new_field.name}'
+            revised_fields.append(new_field)
+
+        return revised_fields
