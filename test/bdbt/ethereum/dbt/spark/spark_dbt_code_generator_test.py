@@ -1,4 +1,5 @@
 import os
+import pathlib
 import tempfile
 import unittest
 from typing import AnyStr
@@ -32,8 +33,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             generator.generate_dbt_udf(
                 workspace=tempdir,
                 project_name='opensea',
-                contract_name='WyvernExchangeV2',
-                abi=abi
+                contract_name_to_abi={'WyvernExchangeV2': abi}
             )
 
             self.assertEqual(1, len(os.listdir(tempdir)))
@@ -41,7 +41,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
 
             project_path = os.path.join(tempdir, 'opensea')
             self.assertEqual(1, len(os.listdir(project_path)))
-            self.assertEqual('WyvernExchangeV2_udf.jar', os.listdir(project_path)[0])
+            self.assertEqual('opensea_udf.jar', os.listdir(project_path)[0])
 
     def test_generate_call_udf(self):
         with tempfile.TemporaryDirectory() as tempdir:
@@ -158,16 +158,18 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             transformer = ABITransformer()
             raw_abi = normalize_abi(_read_resource('wyvern_exchange_v2_abi.json'))
             abi = transformer.transform_abi(abi=raw_abi)
+            project_path = os.path.join(tempdir, 'opensea')
+            pathlib.Path(project_path).mkdir()
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.generate_event_dbt_model(
-                project_path=tempdir,
+                project_path=project_path,
                 contract_name='WyvernExchangeV2',
                 contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
                 event=[i for i in abi.events if i.name == 'OrderApprovedPartOne'][0]
             )
 
-            model_filepath = os.path.join(tempdir, os.listdir(tempdir)[0])
+            model_filepath = os.path.join(project_path, os.listdir(project_path)[0])
             with open(model_filepath, 'r') as f:
                 content = f.read()
 
@@ -180,16 +182,18 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             transformer = ABITransformer()
             raw_abi = normalize_abi(_read_resource('wyvern_exchange_v2_abi.json'))
             abi = transformer.transform_abi(abi=raw_abi)
+            project_path = os.path.join(tempdir, 'opensea')
+            pathlib.Path(project_path).mkdir()
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.generate_call_dbt_model(
-                project_path=tempdir,
+                project_path=project_path,
                 contract_name='WyvernExchangeV2',
                 contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
                 call=[i for i in abi.calls if i.name == 'atomicMatch_'][0]
             )
 
-            model_filepath = os.path.join(tempdir, os.listdir(tempdir)[0])
+            model_filepath = os.path.join(project_path, os.listdir(project_path)[0])
             with open(model_filepath, 'r') as f:
                 content = f.read()
 

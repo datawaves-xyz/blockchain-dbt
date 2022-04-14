@@ -76,7 +76,7 @@ select
     transaction_hash as evt_tx_hash,
     address as contract_address,
     dt
-from ethereum.logs
+from {{ ref('stg_ethereum__logs') }}
 where address = lower("{{CONTRACT_ADDRESS}}")
 and topics_arr[0] = "{{EVENT_SELECTOR}}"
 
@@ -106,7 +106,7 @@ with base as (
         address as contract_address,
         dt,
         ethereum.{{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
-    from ethereum.logs
+    from {{ ref('stg_ethereum__logs') }}
     where address = lower("{{CONTRACT_ADDRESS}}")
     and topics_arr[0] = "{{EVENT_SELECTOR}}"
 
@@ -145,7 +145,7 @@ select
     transaction_hash as call_tx_hash,
     to_address as contract_address,
     dt
-from ethereum.traces
+from {{ ref('stg_ethereum__traces') }}
 where to_address = lower("{{CONTRACT_ADDRESS}}")
 and substr(traces.input, 1, 10) = "{{CALL_SELECTOR}}"
 
@@ -175,8 +175,8 @@ with base as (
         transaction_hash as call_tx_hash,
         to_address as contract_address,
         dt,
-        ethereum.decode_call(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
-    from ethereum.traces
+        ethereum.{{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
+    from {{ ref('stg_ethereum__traces') }}
     where to_address = lower("{{CONTRACT_ADDRESS}}")
     and substr(traces.input, 1, 10) = "{{CALL_SELECTOR}}"
 
