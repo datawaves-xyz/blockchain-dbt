@@ -3,9 +3,9 @@
 ## Parse the function in the ABI to Call schema
 
 ```python
-from bdbt.provider.spark_type_provider import SparkDataTypeProvider
-from bdbt.abi.abi_transformer import ABITransformer
-from bdbt.abi.utils import normalize_abi
+from bdbt.ethereum.abi.provider import SparkDataTypeProvider
+from bdbt.ethereum.abi import ABITransformer
+from bdbt.ethereum.abi.utils import normalize_abi
 
 provider = SparkDataTypeProvider()
 transformer = ABITransformer(provider)
@@ -22,7 +22,7 @@ call_schema = transformer.transform_to_call_schema(abi_call_schema)
 ## Database schema to dbt model
 
 ```python
-from bdbt.dbt.dbt_transformer import DbtTransformer
+from bdbt.ethereum.dbt import DbtTransformer
 import pyaml
 
 dbt_transformer = DbtTransformer(provider=provider)

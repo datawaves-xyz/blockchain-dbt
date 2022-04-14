@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from bdbt.abi.abi_data_type import (
+from bdbt.ethereum.abi.abi_data_type import (
     ABIIntType,
     ABIStringType,
     ABIAddressType,
@@ -63,7 +63,4 @@ class DataTypeProvider(Generic[T]):
         raise NotImplementedError()
 
     def transform_from_tuple_type(self, atype: ABITupleType) -> T:
-        raise NotImplementedError()
-
-    def get_type_name(self, data_type: T) -> str:
         raise NotImplementedError()

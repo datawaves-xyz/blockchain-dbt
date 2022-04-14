@@ -2,8 +2,8 @@ import unittest
 from typing import AnyStr
 
 import test
-from bdbt.abi.abi_type import ABI, ABICall, ABICallElement
-from bdbt.abi.utils import (
+from bdbt.ethereum.abi.abi_type import ABI, ABICall, ABICallElement
+from bdbt.ethereum.abi.utils import (
     normalize_abi,
     filter_by_name,
     filter_by_type

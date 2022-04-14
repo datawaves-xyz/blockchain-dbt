@@ -1,7 +1,7 @@
 import json
 from typing import cast, List
 
-from bdbt.abi.abi_type import ABI, ABIElement
+from bdbt.ethereum.abi.abi_type import ABI, ABIElement
 
 
 def normalize_abi(abi_json: str) -> ABI:
