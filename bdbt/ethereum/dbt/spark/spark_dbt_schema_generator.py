@@ -1,6 +1,6 @@
 from typing import Dict, Any
 
-from bdbt.dbt.dbt_schema_generator import DbtSchemaGenerator
+from bdbt.ethereum.dbt.dbt_schema_generator import DbtSchemaGenerator
 
 
 class SparkDbtSchemaGenerator(DbtSchemaGenerator):

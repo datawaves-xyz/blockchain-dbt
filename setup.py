@@ -11,7 +11,7 @@ long_description = read('README.md.md') if os.path.isfile("README.md.md") else "
 
 setup(
     name='blockchain-dbt',
-    version='0.1.1',
+    version='0.2.0',
     author='Datawaves',
     author_email='team@datawaves.xyz',
     description='The schema transformer and dbt utils for blockchain data.',
@@ -33,10 +33,19 @@ setup(
     python_requires='>=3.6,<4',
     install_requires=[
         'pyaml==21.10.1',
-        'eth-utils==1.10.0'
+        'eth-utils==1.10.0',
+        'click==7.1.2',
     ],
     extras_require={
-        'pyspark': ["pyspark==3.2.1"],
+        'dev': [
+            "pytest~=4.3.0",
+            "pyspark==3.2.1"
+        ]
+    },
+    entry_points={
+        'console_scripts': [
+            'bdbt=bdbt.cli:cli'
+        ]
     },
     project_urls={
         'Bug Reports': 'https://github.com/datawaves/blockchain-dbt/issues',
@@ -44,7 +53,6 @@ setup(
     },
     tests_require=[
         'nose==1.3.7',
-        'unittest2>=1.0.0',
-        'web3==5.28.0'
+        'unittest2>=1.0.0'
     ]
 )

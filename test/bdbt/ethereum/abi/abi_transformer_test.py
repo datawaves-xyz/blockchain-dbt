@@ -2,7 +2,7 @@ import unittest
 from typing import AnyStr, Dict
 
 import test
-from bdbt.abi.abi_data_type import (
+from bdbt.ethereum.abi.abi_data_type import (
     ABIField,
     ABIBytesType,
     ABIArrayType,
@@ -11,8 +11,8 @@ from bdbt.abi.abi_data_type import (
     ABITupleType,
     ABIFixedType
 )
-from bdbt.abi.abi_transformer import ABITransformer
-from bdbt.abi.utils import normalize_abi
+from bdbt.ethereum.abi.abi_transformer import ABITransformer
+from bdbt.ethereum.abi.utils import normalize_abi
 
 RESOURCE_GROUP = 'abi_test'
 
@@ -33,7 +33,7 @@ class ABITransformerTestCase(unittest.TestCase):
         call_schema = transformer.transform_abi_call(abi=abi, call_name='AllTypeFunction')
 
         inputs_mapping_by_name: Dict[str, ABIField] = \
-            {i.name: i for i in call_schema['inputs']}
+            {i.name: i for i in call_schema.inputs}
 
         self.assertEqual("address", inputs_mapping_by_name['addr'].ftype.canonical_type)
         self.assertEqual("int8", inputs_mapping_by_name['i8'].ftype.canonical_type)

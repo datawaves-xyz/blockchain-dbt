@@ -1,5 +1,4 @@
-from bdbt.abi.abi_data_type import (
-    ABITupleType,
+from bdbt.ethereum.abi.abi_data_type import (
     ABIArrayType,
     ABIFunctionType,
     ABIBytesType,
@@ -7,9 +6,10 @@ from bdbt.abi.abi_data_type import (
     ABIBoolType,
     ABIAddressType,
     ABIStringType,
-    ABIIntType
+    ABIIntType,
+    ABITupleType
 )
-from bdbt.provider.data_type_provider import DataTypeProvider
+from bdbt.ethereum.abi.provider.data_type_provider import DataTypeProvider
 
 
 class HiveObjectInspectorTypeProvider(DataTypeProvider[str]):

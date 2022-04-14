@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from bdbt.abi.abi_data_type import (
+from bdbt.ethereum.abi.abi_data_type import (
     ABIIntType,
     ABIStringType,
     ABIAddressType,

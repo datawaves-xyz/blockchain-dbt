@@ -4,9 +4,9 @@ import unittest
 from typing import AnyStr
 
 import test
-from bdbt.abi.abi_transformer import ABITransformer
-from bdbt.abi.utils import normalize_abi
-from bdbt.dbt.spark.spark_dbt_code_generator import SparkDbtCodeGenerator
+from bdbt.ethereum.abi.abi_transformer import ABITransformer
+from bdbt.ethereum.abi.utils import normalize_abi
+from bdbt.ethereum.dbt.spark.spark_dbt_code_generator import SparkDbtCodeGenerator
 
 RESOURCE_GROUP = 'dbt_test'
 

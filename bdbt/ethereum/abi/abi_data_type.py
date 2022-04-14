@@ -5,14 +5,14 @@ from typing import (
     Dict,
 )
 
-from bdbt.abi.abi_type import ABIEvent, ABICall
+from bdbt.ethereum.abi.abi_type import ABIEvent, ABICall
 
 try:
     from typing import TypedDict
 except ImportError:
     from typing_extensions import TypedDict
 
-from bdbt.exceptions import ABITypeNotValid
+from bdbt.ethereum.exceptions import ABITypeNotValid
 
 
 @dataclass

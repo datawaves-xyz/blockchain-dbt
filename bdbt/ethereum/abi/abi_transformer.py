@@ -2,7 +2,7 @@ import re
 from copy import deepcopy
 from typing import List, Dict, TypeVar, Generic
 
-from bdbt.abi.abi_data_type import (
+from bdbt.ethereum.abi.abi_data_type import (
     ABIDataType,
     ABIIntType,
     ABIAddressType,
@@ -18,15 +18,15 @@ from bdbt.abi.abi_data_type import (
     ABICallSchema,
     ABISchema
 )
-from bdbt.abi.abi_type import (
+from bdbt.ethereum.abi.abi_type import (
     ABIEventElement,
     ABI,
     ABIEvent,
     ABICall,
     ABICallElement
 )
-from bdbt.abi.utils import filter_by_type_and_name, filter_by_type
-from bdbt.exceptions import TargetItemNotFound
+from bdbt.ethereum.abi.utils import filter_by_type_and_name, filter_by_type
+from bdbt.ethereum.exceptions import TargetItemNotFound
 
 T = TypeVar('T')
 

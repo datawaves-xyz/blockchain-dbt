@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Sequence, List
 
 try:
@@ -17,3 +18,11 @@ class DbtTable(TypedDict, total=False):
 
 class DbtModelSchema(TypedDict, total=False):
     models: List[DbtTable]
+
+
+class Database(Enum):
+    SPARK = 'spark'
+    BIG_QUERY = 'big_query'
+    REDSHIFT = 'redshift'
+    SNOWFLAKE = 'snowflake'
+    POSTGRES = 'postgres'

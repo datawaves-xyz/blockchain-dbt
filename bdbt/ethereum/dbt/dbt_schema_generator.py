@@ -4,8 +4,8 @@ from typing import List, Any, Dict
 
 import pyaml
 
-from bdbt.abi.abi_data_type import ABISchema
-from bdbt.dbt.resource_type import DbtTable, DbtColumn, DbtModelSchema
+from bdbt.ethereum.abi.abi_data_type import ABISchema
+from bdbt.global_type import DbtTable, DbtColumn, DbtModelSchema
 
 evt_base_column = [
     'evt_block_number',

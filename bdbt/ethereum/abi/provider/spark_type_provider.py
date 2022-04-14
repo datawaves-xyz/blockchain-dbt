@@ -14,7 +14,7 @@ from pyspark.sql.types import (
     StructField
 )
 
-from bdbt.abi.abi_data_type import (
+from bdbt.ethereum.abi.abi_data_type import (
     ABIFunctionType,
     ABIBytesType,
     ABIFixedType,
@@ -25,7 +25,7 @@ from bdbt.abi.abi_data_type import (
     ABITupleType,
     ABIArrayType
 )
-from bdbt.provider.data_type_provider import DataTypeProvider
+from bdbt.ethereum.abi.provider.data_type_provider import DataTypeProvider
 
 
 class SparkDataTypeProvider(DataTypeProvider[DataType]):

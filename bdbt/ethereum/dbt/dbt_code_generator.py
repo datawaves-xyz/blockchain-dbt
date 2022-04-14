@@ -2,7 +2,7 @@ import logging
 import os.path
 import pathlib
 
-from bdbt.abi.abi_data_type import ABISchema, ABIEventSchema, ABICallSchema
+from bdbt.ethereum.abi.abi_data_type import ABISchema, ABIEventSchema, ABICallSchema
 
 
 class DbtCodeGenerator:

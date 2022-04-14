@@ -4,9 +4,9 @@ import subprocess
 
 from eth_utils import event_abi_to_log_topic, encode_hex, function_abi_to_4byte_selector
 
-from bdbt.abi.abi_data_type import ABIEventSchema, ABICallSchema
-from bdbt.dbt.dbt_code_generator import DbtCodeGenerator
-from bdbt.provider.hive_object_inspector_type_provider import HiveObjectInspectorTypeProvider
+from bdbt.ethereum.abi.abi_data_type import ABIEventSchema, ABICallSchema
+from bdbt.ethereum.abi.provider.hive_object_inspector_type_provider import HiveObjectInspectorTypeProvider
+from bdbt.ethereum.dbt.dbt_code_generator import DbtCodeGenerator
 
 event_clazz_template = """package io.iftech.sparkudf.hive;
 
