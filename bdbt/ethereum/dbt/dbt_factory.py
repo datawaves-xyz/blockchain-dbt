@@ -8,14 +8,14 @@ from bdbt.global_type import Database
 class DbtFactory:
 
     @staticmethod
-    def new_code_generator(database: str, remote_workspace: str) -> DbtCodeGenerator:
+    def new_code_generator(database: Database, remote_workspace: str) -> DbtCodeGenerator:
         if database == Database.SPARK:
             return SparkDbtCodeGenerator(remote_workspace)
         else:
             raise ValueError(f'{database} is not be supported now.')
 
     @staticmethod
-    def new_schema_generator(database: str) -> DbtSchemaGenerator:
+    def new_schema_generator(database: Database) -> DbtSchemaGenerator:
         if database == Database.SPARK:
             return SparkDbtSchemaGenerator()
         else:

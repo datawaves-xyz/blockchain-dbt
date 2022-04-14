@@ -1,6 +1,7 @@
 import logging
 import os.path
 import pathlib
+from typing import Dict
 
 from bdbt.ethereum.abi.abi_data_type import ABISchema, ABIEventSchema, ABICallSchema
 
@@ -32,7 +33,7 @@ class DbtCodeGenerator:
         one model sql file for one event or call.
         """
         project_path = os.path.join(workspace, project_name)
-        pathlib.Path(project_path).mkdir(parents=True, exist_ok=False)
+        pathlib.Path(project_path).mkdir(parents=True, exist_ok=True)
 
         for event in abi.events:
             self.generate_event_dbt_model(project_path, contract_name, contract_address, event)
@@ -43,8 +44,7 @@ class DbtCodeGenerator:
             self,
             workspace: str,
             project_name: str,
-            contract_name: str,
-            abi: ABISchema
+            contract_name_to_abi: Dict[str, ABISchema]
     ):
         """
         Generate some UDF file bind with the destination database, the UDF is used to decode contract,
@@ -54,15 +54,16 @@ class DbtCodeGenerator:
             raise Exception(f'{self.__class__.__name__} do not implement some functions about UDF')
 
         project_path = os.path.join(workspace, project_name)
-        pathlib.Path(project_path).mkdir(parents=True, exist_ok=False)
+        pathlib.Path(project_path).mkdir(parents=True, exist_ok=True)
 
         udf_workspace = self.prepare_udf_workspace(project_path)
 
         # the empty events and empty calls don't need UDF to decode data
-        for event in abi.nonempty_events:
-            self.generate_event_udf(udf_workspace, contract_name, event)
-        for call in abi.nonempty_calls:
-            self.generate_call_udf(udf_workspace, contract_name, call)
+        for contract_name, abi in contract_name_to_abi.items():
+            for event in abi.nonempty_events:
+                self.generate_event_udf(udf_workspace, contract_name, event)
+            for call in abi.nonempty_calls:
+                self.generate_call_udf(udf_workspace, contract_name, call)
 
         self.build_udf(project_path)
 

@@ -32,26 +32,26 @@ class DbtSchemaGenerator:
         raise NotImplementedError()
 
     @staticmethod
-    def generate_dbt_schema_file(
+    def generate_dbt_schema(
             workspace: str,
             project_name: str,
-            contract_name: str,
-            abi: ABISchema
+            contract_name_to_abi: Dict[str, ABISchema]
     ):
         project_path = os.path.join(workspace, project_name)
-        pathlib.Path(project_path).mkdir(parents=True, exist_ok=False)
+        pathlib.Path(project_path).mkdir(parents=True, exist_ok=True)
 
         models: List[DbtTable] = []
-        for event in abi.events:
-            columns = [DbtColumn(name=i.name) for i in event.inputs]
-            columns.extend(DbtColumn(name=i) for i in evt_base_column)
-            models.append(DbtTable(name=f'{contract_name}_evt_{event.name}', columns=columns))
+        for contract_name, abi in contract_name_to_abi.items():
+            for event in abi.events:
+                columns = [DbtColumn(name=i.name) for i in event.inputs]
+                columns.extend(DbtColumn(name=i) for i in evt_base_column)
+                models.append(DbtTable(name=f'{contract_name}_evt_{event.name}', columns=columns))
 
-        for call in abi.calls:
-            columns = [DbtColumn(name=i.name) for i in call.inputs]
-            columns.extend([DbtColumn(name=i.name) for i in call.outputs])
-            columns.extend(DbtColumn(name=i) for i in call_base_column)
-            models.append(DbtTable(name=f'{contract_name}_call_{call.name}', columns=columns))
+            for call in abi.calls:
+                columns = [DbtColumn(name=i.name) for i in call.inputs]
+                columns.extend([DbtColumn(name=i.name) for i in call.outputs])
+                columns.extend(DbtColumn(name=i) for i in call_base_column)
+                models.append(DbtTable(name=f'{contract_name}_call_{call.name}', columns=columns))
 
         schema = DbtModelSchema(models=models)
         schema_path = os.path.join(project_path, 'schema.yml')
@@ -65,7 +65,7 @@ class DbtSchemaGenerator:
             workspace: str,
             projects: List[str]
     ):
-        pathlib.Path(workspace).mkdir(parents=True, exist_ok=False)
+        pathlib.Path(workspace).mkdir(parents=True, exist_ok=True)
 
         schema = {i: self.get_dbt_config() for i in projects}
         schema_path = os.path.join(workspace, 'project_additional.yml')

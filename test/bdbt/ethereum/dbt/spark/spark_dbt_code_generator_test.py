@@ -41,7 +41,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
 
             project_path = os.path.join(tempdir, 'opensea')
             self.assertEqual(1, len(os.listdir(project_path)))
-            self.assertEqual('udf.jar', os.listdir(project_path)[0])
+            self.assertEqual('WyvernExchangeV2_udf.jar', os.listdir(project_path)[0])
 
     def test_generate_call_udf(self):
         with tempfile.TemporaryDirectory() as tempdir:

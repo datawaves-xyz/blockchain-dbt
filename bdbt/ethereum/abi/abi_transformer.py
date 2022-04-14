@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import List, Dict, TypeVar, Generic
+from typing import List, Dict
 
 from bdbt.ethereum.abi.abi_data_type import (
     ABIDataType,
@@ -28,10 +28,8 @@ from bdbt.ethereum.abi.abi_type import (
 from bdbt.ethereum.abi.utils import filter_by_type_and_name, filter_by_type
 from bdbt.ethereum.exceptions import TargetItemNotFound
 
-T = TypeVar('T')
 
-
-class ABITransformer(Generic[T]):
+class ABITransformer:
     abi_type_mapping: Dict[str, ABIDataType] = {}
 
     for i in range(8, 257, 8):

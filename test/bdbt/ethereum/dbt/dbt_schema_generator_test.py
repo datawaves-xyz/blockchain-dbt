@@ -26,11 +26,10 @@ class DbtSchemaGeneratorTestCase(unittest.TestCase):
             raw_abi = normalize_abi(_read_resource('wyvern_exchange_v2_abi.json'))
             abi = transformer.transform_abi(abi=raw_abi)
 
-            SparkDbtSchemaGenerator.generate_dbt_schema_file(
+            SparkDbtSchemaGenerator.generate_dbt_schema(
                 workspace=tempdir,
                 project_name='opensea',
-                contract_name='WyvernExchangeV2',
-                abi=abi
+                contract_name_to_abi={'WyvernExchangeV2': abi}
             )
 
             project_path = os.path.join(tempdir, 'opensea')

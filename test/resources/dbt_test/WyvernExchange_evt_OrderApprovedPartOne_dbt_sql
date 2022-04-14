@@ -2,7 +2,7 @@
     config(
         materialized='incremental',
         pre_hook={
-            'sql': 'create function ethereum.wyvernexchangev2_orderapprovedpartone_eventdecodeudf as "io.iftech.sparkudf.hive.WyvernExchangeV2_OrderApprovedPartOne_EventDecodeUDF" using jar "s3a://test/WyvernExchangeV2_OrderApprovedPartOne_EventDecodeUDF.java";'
+            'sql': 'create function ethereum.wyvernexchangev2_orderapprovedpartone_eventdecodeudf as "io.iftech.sparkudf.hive.WyvernExchangeV2_OrderApprovedPartOne_EventDecodeUDF" using jar "s3a://test/WyvernExchangeV2_udf.jar";'
         },
         post_hook={
             'sql': 'drop temporary function if exists ethereum.wyvernexchangev2_orderapprovedpartone_eventdecodeudf'

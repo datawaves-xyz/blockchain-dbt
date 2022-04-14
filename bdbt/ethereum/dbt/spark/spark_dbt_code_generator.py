@@ -1,5 +1,6 @@
 import json
 import os.path
+import pathlib
 import subprocess
 
 from eth_utils import event_abi_to_log_topic, encode_hex, function_abi_to_4byte_selector
@@ -217,6 +218,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             contract_address: str,
             event: ABIEventSchema
     ):
+        project_name = pathlib.Path(project_path).name
         model_name = f'{contract_name}_evt_{event.name}'
         filepath = os.path.join(project_path, model_name + '.sql')
         event_selector = encode_hex(event_abi_to_log_topic(event.raw_schema))
@@ -230,7 +232,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             content = event_dbt_model_sql_template \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
-                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{clazz_name}.java') \
+                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{project_name}_udf.jar') \
                 .replace('{{EVENT_ABI}}', json.dumps(event.raw_schema)) \
                 .replace('{{EVENT_NAME}}', event.name) \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
@@ -245,6 +247,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             contract_address: str,
             call: ABICallSchema
     ):
+        project_name = pathlib.Path(project_path).name
         model_name = f'{contract_name}_call_{call.name}'
         filepath = os.path.join(project_path, model_name + '.sql')
         call_selector = encode_hex(encode_hex(function_abi_to_4byte_selector(call.raw_schema)))
@@ -258,7 +261,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             content = call_dbt_model_sql_template \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
-                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{clazz_name}.java') \
+                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{project_name}_udf.jar') \
                 .replace('{{CALL_ABI}}', json.dumps(call.raw_schema)) \
                 .replace('{{CALL_NAME}}', call.name) \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
@@ -299,8 +302,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         self.create_file_and_write(filepath, content)
 
     def build_udf(self, project_path: str):
+        project_name = pathlib.Path(project_path).name
         java_project_path = os.path.join(project_path, 'java')
-        jar_path = os.path.join(project_path, 'udf.jar')
+        jar_path = os.path.join(project_path, f'{project_name}_udf.jar')
 
         # TODO: use more flexable filename
         self._execute_command(
