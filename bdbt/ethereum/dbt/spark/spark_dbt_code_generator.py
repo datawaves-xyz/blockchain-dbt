@@ -70,17 +70,21 @@ empty_event_dbt_model_sql_template = """select
     transaction_hash as evt_tx_hash,
     address as contract_address,
     dt
-from {{ ref('stg_ethereum__logs') }}
+from {{ ref('stg', 'stg_ethereum__logs') }}
 where address = lower("{{CONTRACT_ADDRESS}}")
 and topics_arr[0] = "{{EVENT_SELECTOR}}"
 
 {% if is_incremental() %}
-  and dt = dbt-date.today()
+  and dt = var('dt')
 {% endif %}
 """
 
 event_dbt_model_sql_template = """{{
     config(
+        materialized='incremental',
+        incremental_strategy='insert_overwrite',
+        partition_by=['dt'],
+        file_format='parquet',
         pre_hook={
             'sql': 'create or replace function {{DATABASE}}.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
@@ -96,12 +100,12 @@ with base as (
         address as contract_address,
         dt,
         {{DATABASE}}.{{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
-    from {{ ref('stg_ethereum__logs') }}
+    from {{ ref('stg', 'stg_ethereum__logs') }}
     where address = lower("{{CONTRACT_ADDRESS}}")
     and topics_arr[0] = "{{EVENT_SELECTOR}}"
 
     {% if is_incremental() %}
-      and dt = dbt-date.today()
+      and dt = var('dt')
     {% endif %}
 ),
 
@@ -129,17 +133,21 @@ empty_call_dbt_model_sql_template = """select
     transaction_hash as call_tx_hash,
     to_address as contract_address,
     dt
-from {{ ref('stg_ethereum__traces') }}
+from {{ ref('stg', 'stg_ethereum__traces') }}
 where to_address = lower("{{CONTRACT_ADDRESS}}")
-and substr(traces.input, 1, 10) = "{{CALL_SELECTOR}}"
+and substr(input, 1, 10) = "{{CALL_SELECTOR}}"
 
 {% if is_incremental() %}
-  and dt = dbt-date.today()
+  and dt = var('dt')
 {% endif %}
 """
 
 call_dbt_model_sql_template = """{{
     config(
+        materialized='incremental',
+        incremental_strategy='insert_overwrite',
+        partition_by=['dt'],
+        file_format='parquet',
         pre_hook={
             'sql': 'create or replace function {{DATABASE}}.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
@@ -158,10 +166,10 @@ with base as (
         {{DATABASE}}.{{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
     from {{ ref('stg_ethereum__traces') }}
     where to_address = lower("{{CONTRACT_ADDRESS}}")
-    and substr(traces.input, 1, 10) = "{{CALL_SELECTOR}}"
+    and substr(input, 1, 10) = "{{CALL_SELECTOR}}"
 
     {% if is_incremental() %}
-      and dt = dbt-date.today()
+      and dt = var('dt')
     {% endif %}
 ),
 
@@ -247,7 +255,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CALL_ABI}}', json.dumps(call.raw_schema)) \
                 .replace('{{CALL_NAME}}', call.name) \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{CALL_SELECTOR}}', call_selector)
+                .replace('{{CALL_SELECTOR}}', call_selector[0:10])
 
         self.create_file_and_write(filepath, content)
 

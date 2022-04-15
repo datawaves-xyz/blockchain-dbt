@@ -1,5 +1,9 @@
 {{
     config(
+        materialized='incremental',
+        incremental_strategy='insert_overwrite',
+        partition_by=['dt'],
+        file_format='parquet',
         pre_hook={
             'sql': 'create or replace function opensea.wyvernexchangev2_atomicmatch__calldecodeudf as "io.iftech.sparkudf.hive.WyvernExchangeV2_atomicMatch__CallDecodeUDF" using jar "s3a://test/opensea_udf.jar";'
         }
@@ -18,10 +22,10 @@ with base as (
         opensea.wyvernexchangev2_atomicmatch__calldecodeudf(unhex_input, unhex_output, '{"constant": false, "inputs": [{"name": "addrs", "type": "address[14]"}, {"name": "uints", "type": "uint256[18]"}, {"name": "feeMethodsSidesKindsHowToCalls", "type": "uint8[8]"}, {"name": "calldataBuy", "type": "bytes"}, {"name": "calldataSell", "type": "bytes"}, {"name": "replacementPatternBuy", "type": "bytes"}, {"name": "replacementPatternSell", "type": "bytes"}, {"name": "staticExtradataBuy", "type": "bytes"}, {"name": "staticExtradataSell", "type": "bytes"}, {"name": "vs", "type": "uint8[2]"}, {"name": "rssMetadata", "type": "bytes32[5]"}], "name": "atomicMatch_", "outputs": [], "payable": true, "stateMutability": "payable", "type": "function"}', 'atomicMatch_') as data
     from {{ ref('stg_ethereum__traces') }}
     where to_address = lower("0x7f268357a8c2552623316e2562d90e642bb538e5")
-    and substr(traces.input, 1, 10) = "0x30786162383334626162"
+    and substr(input, 1, 10) = "0x30786162"
 
     {% if is_incremental() %}
-      and dt = dbt-date.today()
+      and dt = var('dt')
     {% endif %}
 ),
 
