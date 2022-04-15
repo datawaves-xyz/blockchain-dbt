@@ -63,13 +63,7 @@ public class {{CLASS_NAME}} extends DecodeContractFunctionHiveUDF {
 }
 """
 
-empty_event_dbt_model_sql_template = """{{
-    config(
-        materialized='incremental'
-    )
-}}
-
-select
+empty_event_dbt_model_sql_template = """select
     block_number as evt_block_number,
     block_timestamp as evt_block_time,
     log_index as evt_index,
@@ -87,12 +81,8 @@ and topics_arr[0] = "{{EVENT_SELECTOR}}"
 
 event_dbt_model_sql_template = """{{
     config(
-        materialized='incremental',
         pre_hook={
-            'sql': 'create function ethereum.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
-        },
-        post_hook={
-            'sql': 'drop temporary function if exists ethereum.{{UDF_NAME}}'
+            'sql': 'create or replace function {{DATABASE}}.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
     )
 }}
@@ -105,7 +95,7 @@ with base as (
         transaction_hash as evt_tx_hash,
         address as contract_address,
         dt,
-        ethereum.{{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
+        {{DATABASE}}.{{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
     from {{ ref('stg_ethereum__logs') }}
     where address = lower("{{CONTRACT_ADDRESS}}")
     and topics_arr[0] = "{{EVENT_SELECTOR}}"
@@ -131,13 +121,7 @@ select *
 from final
 """
 
-empty_call_dbt_model_sql_template = """{{
-    config(
-        materialized='incremental'
-    )
-}}
-
-select
+empty_call_dbt_model_sql_template = """select
     status==1 as call_success,
     block_number as call_block_number,
     block_timestamp as call_block_time,
@@ -156,12 +140,8 @@ and substr(traces.input, 1, 10) = "{{CALL_SELECTOR}}"
 
 call_dbt_model_sql_template = """{{
     config(
-        materialized='incremental',
         pre_hook={
-            'sql': 'create function ethereum.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
-        },
-        post_hook={
-            'sql': 'drop temporary function if exists ethereum.{{UDF_NAME}}'
+            'sql': 'create or replace function {{DATABASE}}.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
     )
 }}
@@ -175,7 +155,7 @@ with base as (
         transaction_hash as call_tx_hash,
         to_address as contract_address,
         dt,
-        ethereum.{{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
+        {{DATABASE}}.{{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
     from {{ ref('stg_ethereum__traces') }}
     where to_address = lower("{{CONTRACT_ADDRESS}}")
     and substr(traces.input, 1, 10) = "{{CALL_SELECTOR}}"
@@ -230,6 +210,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         else:
             clazz_name = self._get_event_udf_class_name(contract_name, event)
             content = event_dbt_model_sql_template \
+                .replace('{{DATABASE}}', project_name) \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
                 .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{project_name}_udf.jar') \
@@ -259,6 +240,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         else:
             clazz_name = self._get_call_udf_class_name(contract_name, call)
             content = call_dbt_model_sql_template \
+                .replace('{{DATABASE}}', project_name) \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
                 .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{project_name}_udf.jar') \
