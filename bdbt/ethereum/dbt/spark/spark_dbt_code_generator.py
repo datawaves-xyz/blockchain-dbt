@@ -70,7 +70,7 @@ empty_event_dbt_model_sql_template = """select
     transaction_hash as evt_tx_hash,
     address as contract_address,
     dt
-from {{ ref('stg', 'stg_ethereum__logs') }}
+from {{ ref('stg_ethereum__logs') }}
 where address = lower("{{CONTRACT_ADDRESS}}")
 and topics_arr[0] = "{{EVENT_SELECTOR}}"
 
@@ -100,7 +100,7 @@ with base as (
         address as contract_address,
         dt,
         {{DATABASE}}.{{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
-    from {{ ref('stg', 'stg_ethereum__logs') }}
+    from {{ ref('stg_ethereum__logs') }}
     where address = lower("{{CONTRACT_ADDRESS}}")
     and topics_arr[0] = "{{EVENT_SELECTOR}}"
 
@@ -117,7 +117,7 @@ final as (
         evt_tx_hash,
         contract_address,
         dt,
-        data.inputs.*
+        data.input.*
     from base
 )
 
@@ -133,7 +133,7 @@ empty_call_dbt_model_sql_template = """select
     transaction_hash as call_tx_hash,
     to_address as contract_address,
     dt
-from {{ ref('stg', 'stg_ethereum__traces') }}
+from {{ ref('stg_ethereum__traces') }}
 where to_address = lower("{{CONTRACT_ADDRESS}}")
 and substr(input, 1, 10) = "{{CALL_SELECTOR}}"
 
@@ -182,7 +182,7 @@ final as (
         call_tx_hash,
         contract_address,
         dt,
-        data.inputs.*,
+        data.input.*,
         data.output.*
     from base
 )
