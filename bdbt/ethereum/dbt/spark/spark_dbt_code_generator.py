@@ -73,7 +73,9 @@ empty_event_dbt_model_sql_template = """select
     dt
 from {{ ref('stg_ethereum__logs') }}
 where address = lower("{{CONTRACT_ADDRESS}}")
-and topics_arr[0] = "{{EVENT_SELECTOR}}"
+and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
+and selector = "{{EVENT_SELECTOR}}"
+and selector_hash = abs(hash("{{EVENT_SELECTOR}}")) % 10
 
 {% if is_incremental() %}
   and dt = var('dt')
@@ -103,7 +105,9 @@ with base as (
         {{DATABASE}}.{{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
     from {{ ref('stg_ethereum__logs') }}
     where address = lower("{{CONTRACT_ADDRESS}}")
-    and topics_arr[0] = "{{EVENT_SELECTOR}}"
+    and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
+    and selector = "{{EVENT_SELECTOR}}"
+    and selector_hash = abs(hash("{{EVENT_SELECTOR}}")) % 10
 
     {% if is_incremental() %}
       and dt = var('dt')
@@ -136,7 +140,9 @@ empty_call_dbt_model_sql_template = """select
     dt
 from {{ ref('stg_ethereum__traces') }}
 where to_address = lower("{{CONTRACT_ADDRESS}}")
-and substr(input, 1, 10) = "{{CALL_SELECTOR}}"
+and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
+and selector = "{{CALL_SELECTOR}}"
+and selector_hash = abs(hash("{{CALL_SELECTOR}}")) % 10
 
 {% if is_incremental() %}
   and dt = var('dt')
@@ -167,7 +173,9 @@ with base as (
         {{DATABASE}}.{{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
     from {{ ref('stg_ethereum__traces') }}
     where to_address = lower("{{CONTRACT_ADDRESS}}")
-    and substr(input, 1, 10) = "{{CALL_SELECTOR}}"
+    and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
+    and selector = "{{CALL_SELECTOR}}"
+    and selector_hash = abs(hash("{{CALL_SELECTOR}}")) % 10
 
     {% if is_incremental() %}
       and dt = var('dt')
