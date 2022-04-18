@@ -2,6 +2,7 @@ import json
 import os.path
 import pathlib
 import subprocess
+import xml.etree.ElementTree as ET
 
 from eth_utils import event_abi_to_log_topic, encode_hex, function_abi_to_4byte_selector
 
@@ -296,40 +297,53 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         java_project_path = os.path.join(project_path, 'java')
         jar_path = os.path.join(project_path, f'{project_name}_udf.jar')
 
-        # TODO: use more flexable filename
+        root = ET.parse(os.path.join(java_project_path, 'pom.xml')).getroot()
+        version = root.find('{http://maven.apache.org/POM/4.0.0}version').text
+
         self._execute_command(
-            f"""
-            cd {java_project_path} \
-            && mvn clean package -DskipTests \
-            && mv target/blockchain-spark-0.5.0-jar-with-dependencies.jar {jar_path} \
+            command=f"""
+            mvn clean package -DskipTests \
+            && mv target/blockchain-spark-{version}-jar-with-dependencies.jar {jar_path} \
             && cd {project_path} \
             && rm -rf java
-            """
+            """,
+            dir=java_project_path
         )
 
     def prepare_udf_workspace(self, project_path: str) -> str:
         # clone blockchain-spark project and move java dir to the root
         # TODO: release blockchain-spark project to maven central
         self._execute_command(
-            f"""
-            cd {project_path}  \
-            && git clone https://github.com/datawaves-xyz/blockchain-spark.git \
+            command=f"""
+            git clone https://github.com/datawaves-xyz/blockchain-spark.git \
             && mv blockchain-spark/java java \
             && rm -rf blockchain-spark
-            """
+            """,
+            dir=project_path
         )
         return os.path.join(project_path, 'java/src/main/java/io/iftech/sparkudf/hive')
 
-    def _execute_command(self, command: str):
-        p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = p.communicate()
+    def _execute_command(self, command: str, dir: str):
+        sp = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=dir,
+            shell=True,
+            close_fds=True)
+        self.logger.info("Output:")
+        for line in iter(sp.stdout.readline, b''):
+            line = line.decode('utf-8').rstrip()
+            self.logger.info(line)
+        sp.wait()
+        self.logger.info(
+            "Command exited with return code %s",
+            sp.returncode
+        )
 
-        if out:
-            self.logger.info("standard output of subprocess:")
-            self.logger.info(out.decode('utf-8'))
-
-        if p.returncode != 0:
-            raise ChildProcessError(f'execute {command} getting error response: {err.decode("utf-8")}')
+        if sp.returncode != 0:
+            err_msg = '\n'.join([line.decode('utf-8').rstrip() for line in iter(sp.stderr.readline, b'')])
+            raise ChildProcessError(f'execute {command} getting error response: {err_msg}')
 
     @staticmethod
     def _get_event_udf_class_name(contract_name: str, event: ABIEventSchema):
