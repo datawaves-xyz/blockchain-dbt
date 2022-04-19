@@ -1,5 +1,6 @@
 import os
 import pathlib
+import shutil
 import tempfile
 import unittest
 from typing import AnyStr
@@ -25,23 +26,19 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
 
     def test_generate_dbt_udf(self):
         with tempfile.TemporaryDirectory() as tempdir:
+            shutil.copyfile(_get_resource_path('dbt_project.yml'), os.path.join(tempdir, 'dbt_project.yml'))
             transformer = ABITransformer()
             raw_abi = normalize_abi(_read_resource('wyvern_exchange_v2_abi.json'))
             abi = transformer.transform_abi(abi=raw_abi)
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
-            generator.generate_dbt_udf(
-                workspace=tempdir,
-                project_name='opensea',
-                contract_name_to_abi={'WyvernExchangeV2': abi}
+            generator.gen_udf_for_dbt(
+                dbt_dir=tempdir,
+                abi_map={'opensea': {'WyvernExchangeV2': abi}}
             )
 
-            self.assertEqual(1, len(os.listdir(tempdir)))
-            self.assertEqual('opensea', os.listdir(tempdir)[0])
-
-            project_path = os.path.join(tempdir, 'opensea')
-            self.assertEqual(1, len(os.listdir(project_path)))
-            self.assertEqual('opensea_udf.jar', os.listdir(project_path)[0])
+            self.assertEqual(2, len(os.listdir(tempdir)))
+            self.assertTrue('blockchain-dbt-udf-0.1.0.jar' in os.listdir(tempdir))
 
     def test_generate_call_udf(self):
         with tempfile.TemporaryDirectory() as tempdir:
@@ -52,6 +49,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.generate_call_udf(
                 udf_workspace=tempdir,
+                project_name='test',
                 contract_name='Test',
                 call=[i for i in abi.calls if i.name == 'AllTypeFunction'][0]
             )
@@ -60,7 +58,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             with open(java_filepath, 'r') as f:
                 content = f.read()
 
-            required_content = _read_resource('Test_AllTypeFunctionCallDecodeUDF.java')
+            required_content = _read_resource('test_Test_AllTypeFunctionCallDecodeUDF.java')
 
             self.assertEqual(required_content, content)
 
@@ -73,6 +71,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.generate_event_udf(
                 udf_workspace=tempdir,
+                project_name='opensea',
                 contract_name='WyvernExchangeV2',
                 event=[i for i in abi.events if i.name == 'OrderApprovedPartOne'][0]
             )
@@ -81,7 +80,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             with open(java_filepath, 'r') as f:
                 content = f.read()
 
-            required_content = _read_resource('WyvernExchangeV2_OrderApprovedPartOneEventDecodeUDF.java')
+            required_content = _read_resource('opensea_WyvernExchangeV2_OrderApprovedPartOneEventDecodeUDF.java')
 
             self.assertEqual(required_content, content)
 
@@ -92,7 +91,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             abi = transformer.transform_abi(abi=raw_abi)
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
-            generator.generate_dbt_models(
+            generator.gen_models_for_project(
                 workspace=tempdir,
                 project_name='opensea',
                 contract_name='WyvernExchangeV2',

@@ -20,7 +20,7 @@ class DbtCodeGenerator:
         with open(filepath, 'w') as f:
             f.write(content)
 
-    def generate_dbt_models(
+    def gen_models_for_project(
             self,
             workspace: str,
             project_name: str,
@@ -40,32 +40,31 @@ class DbtCodeGenerator:
         for call in abi.calls:
             self.generate_call_dbt_model(project_path, contract_name, contract_address, call)
 
-    def generate_dbt_udf(
-            self,
-            workspace: str,
-            project_name: str,
-            contract_name_to_abi: Dict[str, ABISchema]
-    ):
+    def gen_udf_for_dbt(self, dbt_dir: str, abi_map: Dict[str, Dict[str, ABISchema]]):
         """
-        Generate some UDF file bind with the destination database, the UDF is used to decode contract,
-        we can integrate Javascript or Python code with SQL in some database, maybe they needn't define UDF.
+        Generating the external dependency UDF required for the dbt decode contract process, there are some databases
+        that are available with a script language runtime, then they do not need to generate additional UDFs via this
+        method.
+        However, if the database does not support another language in the SQL runtime, then an external UDF may be
+        required, such as Spark, which can generate jar packages via this function to enable the use of more complex
+        functions in SQL.
+        Notes: the best use of this function is to collect all the contract information and call it once to generate all
+        the UDFs.
+
+        :param dbt_dir: the absolute path of the dbt project folder
+        :param abi_map: project_name -> (contract_name -> abi_schema)
         """
-        if not self.need_udf:
-            raise Exception(f'{self.__class__.__name__} do not implement some functions about UDF')
-
-        project_path = os.path.join(workspace, project_name)
-        pathlib.Path(project_path).mkdir(parents=True, exist_ok=True)
-
-        udf_workspace = self.prepare_udf_workspace(project_path)
+        udf_workspace = self.prepare_udf_workspace(dbt_dir)
 
         # the empty events and empty calls don't need UDF to decode data
-        for contract_name, abi in contract_name_to_abi.items():
-            for event in abi.nonempty_events:
-                self.generate_event_udf(udf_workspace, contract_name, event)
-            for call in abi.nonempty_calls:
-                self.generate_call_udf(udf_workspace, contract_name, call)
+        for proj_name, contract_name_to_abi in abi_map.items():
+            for contract_name, abi in contract_name_to_abi.items():
+                for event in abi.nonempty_events:
+                    self.generate_event_udf(udf_workspace, proj_name, contract_name, event)
+                for call in abi.nonempty_calls:
+                    self.generate_call_udf(udf_workspace, proj_name, contract_name, call)
 
-        self.build_udf(project_path)
+        self.build_udf(dbt_dir)
 
     def generate_event_dbt_model(
             self,
@@ -85,14 +84,14 @@ class DbtCodeGenerator:
     ):
         raise NotImplementedError()
 
-    def generate_event_udf(self, udf_workspace: str, contract_name: str, event: ABIEventSchema):
+    def generate_event_udf(self, udf_workspace: str, project_name, contract_name: str, event: ABIEventSchema):
         raise NotImplementedError()
 
-    def generate_call_udf(self, udf_workspace: str, contract_name: str, call: ABICallSchema):
+    def generate_call_udf(self, udf_workspace: str, project_name, contract_name: str, call: ABICallSchema):
         raise NotImplementedError()
 
-    def prepare_udf_workspace(self, project_path: str) -> str:
+    def prepare_udf_workspace(self, dbt_dir: str) -> str:
         raise NotImplementedError()
 
-    def build_udf(self, project_path: str):
+    def build_udf(self, dbt_dir: str):
         raise NotImplementedError()

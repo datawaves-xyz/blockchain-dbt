@@ -3,7 +3,9 @@ import os.path
 import pathlib
 import subprocess
 import xml.etree.ElementTree as ET
+from typing import Dict
 
+import yaml
 from eth_utils import event_abi_to_log_topic, encode_hex, function_abi_to_4byte_selector
 
 from bdbt.ethereum.abi.abi_data_type import ABIEventSchema, ABICallSchema
@@ -225,7 +227,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
                 .replace('{{EVENT_SELECTOR}}', event_selector)
         else:
-            clazz_name = self._get_event_udf_class_name(contract_name, event)
+            clazz_name = self._get_event_udf_class_name(project_name, contract_name, event)
             content = event_dbt_model_sql_template \
                 .replace('{{DATABASE}}', project_name) \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
@@ -255,7 +257,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
                 .replace('{{CALL_SELECTOR}}', call_selector)
         else:
-            clazz_name = self._get_call_udf_class_name(contract_name, call)
+            clazz_name = self._get_call_udf_class_name(project_name, contract_name, call)
             content = call_dbt_model_sql_template \
                 .replace('{{DATABASE}}', project_name) \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
@@ -268,8 +270,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         self.create_file_and_write(filepath, content)
 
-    def generate_event_udf(self, udf_workspace: str, contract_name: str, event: ABIEventSchema):
-        clazz_name = self._get_event_udf_class_name(contract_name, event)
+    def generate_event_udf(self, udf_workspace: str, project_name: str, contract_name: str, event: ABIEventSchema):
+        clazz_name = self._get_event_udf_class_name(project_name, contract_name, event)
         filepath = os.path.join(udf_workspace, clazz_name + '.java')
 
         field_names = ','.join([f'"{i.name}"' for i in event.inputs])
@@ -282,8 +284,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         self.create_file_and_write(filepath, content)
 
-    def generate_call_udf(self, udf_workspace: str, contract_name: str, call: ABICallSchema):
-        clazz_name = self._get_call_udf_class_name(contract_name, call)
+    def generate_call_udf(self, udf_workspace: str, project_name: str, contract_name: str, call: ABICallSchema):
+        clazz_name = self._get_call_udf_class_name(project_name, contract_name, call)
         filepath = os.path.join(udf_workspace, clazz_name + '.java')
 
         input_field_names = ','.join([f'"{i.name}"' for i in call.inputs])
@@ -300,25 +302,34 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         self.create_file_and_write(filepath, content)
 
-    def build_udf(self, project_path: str):
-        project_name = pathlib.Path(project_path).name
-        java_project_path = os.path.join(project_path, 'java')
-        jar_path = os.path.join(project_path, f'{project_name}_udf.jar')
+    def build_udf(self, dbt_dir: str):
+        java_project_path = os.path.join(dbt_dir, 'java')
 
         root = ET.parse(os.path.join(java_project_path, 'pom.xml')).getroot()
-        version = root.find('{http://maven.apache.org/POM/4.0.0}version').text
+        blockchain_spark_version = root.find('{http://maven.apache.org/POM/4.0.0}version').text
+
+        dbt_project_yml = os.path.join(dbt_dir, 'dbt_project.yml')
+        with open(dbt_project_yml, 'r') as f:
+            project_conf: Dict[str, any] = yaml.safe_load(f)
+            dbt_version: str = project_conf['version']
+
+        if dbt_version is None:
+            raise ValueError('dbt_project.yml should contains the version field.')
+
+        # The version of the jar package should be the same with the version of the dbt project.
+        jar_path = os.path.join(dbt_dir, f'blockchain-dbt-udf-{dbt_version}.jar')
 
         self._execute_command(
             command=f"""
             mvn clean package -DskipTests \
-            && mv target/blockchain-spark-{version}-jar-with-dependencies.jar {jar_path} \
-            && cd {project_path} \
+            && mv target/blockchain-spark-{blockchain_spark_version}-jar-with-dependencies.jar {jar_path} \
+            && cd {dbt_dir} \
             && rm -rf java
             """,
             dir=java_project_path
         )
 
-    def prepare_udf_workspace(self, project_path: str) -> str:
+    def prepare_udf_workspace(self, dbt_dir: str) -> str:
         # clone blockchain-spark project and move java dir to the root
         # TODO: release blockchain-spark project to maven central
         self._execute_command(
@@ -327,9 +338,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             && mv blockchain-spark/java java \
             && rm -rf blockchain-spark
             """,
-            dir=project_path
+            dir=dbt_dir
         )
-        return os.path.join(project_path, 'java/src/main/java/io/iftech/sparkudf/hive')
+        return os.path.join(dbt_dir, 'java/src/main/java/io/iftech/sparkudf/hive')
 
     def _execute_command(self, command: str, dir: str):
         sp = subprocess.Popen(
@@ -354,9 +365,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             raise ChildProcessError(f'execute {command} getting error response: {err_msg}')
 
     @staticmethod
-    def _get_event_udf_class_name(contract_name: str, event: ABIEventSchema):
-        return contract_name + '_' + event.name + '_' + 'EventDecodeUDF'
+    def _get_event_udf_class_name(project_name: str, contract_name: str, event: ABIEventSchema):
+        return project_name + '_' + contract_name + '_' + event.name + '_' + 'EventDecodeUDF'
 
     @staticmethod
-    def _get_call_udf_class_name(contract_name: str, call: ABICallSchema):
-        return contract_name + '_' + call.name + '_' + 'CallDecodeUDF'
+    def _get_call_udf_class_name(project_name: str, contract_name: str, call: ABICallSchema):
+        return project_name + '_' + contract_name + '_' + call.name + '_' + 'CallDecodeUDF'

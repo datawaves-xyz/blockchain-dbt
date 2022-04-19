@@ -6,7 +6,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
 import org.sparkproject.guava.collect.ImmutableList;
 
-public class Test_AllTypeFunction_CallDecodeUDF extends DecodeContractFunctionHiveUDF {
+public class test_Test_AllTypeFunction_CallDecodeUDF extends DecodeContractFunctionHiveUDF {
 
     @Override
     public List<String> getInputDataFieldsName() {

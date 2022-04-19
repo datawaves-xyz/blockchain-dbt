@@ -1,6 +1,6 @@
 import os.path
 import pathlib
-from typing import List, Any, Dict
+from typing import List, Dict
 
 import pyaml
 
@@ -28,11 +28,8 @@ call_base_column = [
 
 
 class DbtSchemaGenerator:
-    def get_dbt_config(self) -> Dict[str, Any]:
-        raise NotImplementedError()
-
     @staticmethod
-    def generate_dbt_schema(
+    def gen_dbt_schema(
             workspace: str,
             project_name: str,
             contract_name_to_abi: Dict[str, ABISchema]
@@ -58,16 +55,4 @@ class DbtSchemaGenerator:
         with open(schema_path, 'w') as f:
             # https://docs.getdbt.com/faqs/why-version-2
             f.write('version: 2\n')
-            f.write(pyaml.dump(schema, sort_dicts=False))
-
-    def generate_dbt_project_additional(
-            self,
-            workspace: str,
-            projects: List[str]
-    ):
-        pathlib.Path(workspace).mkdir(parents=True, exist_ok=True)
-
-        schema = {i: self.get_dbt_config() for i in projects}
-        schema_path = os.path.join(workspace, 'project_additional.yml')
-        with open(schema_path, 'w') as f:
             f.write(pyaml.dump(schema, sort_dicts=False))

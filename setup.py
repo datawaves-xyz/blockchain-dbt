@@ -11,7 +11,7 @@ long_description = read('README.md.md') if os.path.isfile("README.md.md") else "
 
 setup(
     name='blockchain-dbt',
-    version='0.2.6',
+    version='0.3.0',
     author='Datawaves',
     author_email='team@datawaves.xyz',
     description='The schema transformer and dbt utils for blockchain data.',
@@ -23,16 +23,14 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9'
     ],
     keywords='blockchain, dbt',
-    python_requires='>=3.6,<4',
+    python_requires='>=3.8,<4',
     install_requires=[
         'pyaml==21.10.1',
+        'ruamel.yaml==0.17.21',
         'eth-utils==1.10.0',
         'click==7.1.2',
     ],
