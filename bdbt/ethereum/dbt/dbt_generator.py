@@ -113,7 +113,13 @@ class DbtGenerator:
         self._logger.info('generate a UDF dependency.')
 
     def _replenish_project_yml(self):
-        projects_dict = {project: {'+schema': project} for project in self.contracts_map.keys()}
+        projects_dict = {
+            project: {
+                '+schema': project,
+                '+tags': ['chain_ethereum', 'level_parse', f'proj_{project}']
+            }
+            for project in self.contracts_map.keys()
+        }
 
         project_conf, ind, bsi = ruamel.yaml.util.load_yaml_guess_indent(open(self.dbt_project_yml))
         project_conf = json.loads(json.dumps(project_conf))

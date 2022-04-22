@@ -66,7 +66,7 @@ public class {{CLASS_NAME}} extends DecodeContractFunctionHiveUDF {
 }
 """
 
-empty_event_dbt_model_sql_template = """select
+empty_event_dbt_model_sql_template = """select /* REPARTITION(dt) */
     block_number as evt_block_number,
     block_timestamp as evt_block_time,
     log_index as evt_index,
@@ -91,7 +91,7 @@ event_dbt_model_sql_template = """{{
         partition_by=['dt'],
         file_format='parquet',
         pre_hook={
-            'sql': 'create or replace function {{DATABASE}}.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
+            'sql': 'create or replace function {{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
     )
 }}
@@ -104,7 +104,7 @@ with base as (
         transaction_hash as evt_tx_hash,
         address as contract_address,
         dt,
-        {{DATABASE}}.{{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
+        {{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
     from {{ ref('stg_ethereum__logs') }}
     where address = lower("{{CONTRACT_ADDRESS}}")
     and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
@@ -128,11 +128,11 @@ final as (
     from base
 )
 
-select *
+select /* REPARTITION(dt) */ *
 from final
 """
 
-empty_call_dbt_model_sql_template = """select
+empty_call_dbt_model_sql_template = """select /* REPARTITION(dt) */
     status==1 as call_success,
     block_number as call_block_number,
     block_timestamp as call_block_time,
@@ -158,7 +158,7 @@ call_dbt_model_sql_template = """{{
         partition_by=['dt'],
         file_format='parquet',
         pre_hook={
-            'sql': 'create or replace function {{DATABASE}}.{{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
+            'sql': 'create or replace function {{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
     )
 }}
@@ -172,7 +172,7 @@ with base as (
         transaction_hash as call_tx_hash,
         to_address as contract_address,
         dt,
-        {{DATABASE}}.{{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
+        {{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
     from {{ ref('stg_ethereum__traces') }}
     where to_address = lower("{{CONTRACT_ADDRESS}}")
     and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
@@ -198,7 +198,7 @@ final as (
     from base
 )
 
-select *
+select /* REPARTITION(dt) */ *
 from final
 """
 
@@ -229,10 +229,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         else:
             clazz_name = self._get_event_udf_class_name(project_name, contract_name, event)
             content = event_dbt_model_sql_template \
-                .replace('{{DATABASE}}', project_name) \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
-                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{project_name}_udf.jar') \
+                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/blockchain-dbt-udf.jar') \
                 .replace('{{EVENT_ABI}}', json.dumps(event.raw_schema)) \
                 .replace('{{EVENT_NAME}}', event.name) \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
@@ -259,10 +258,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         else:
             clazz_name = self._get_call_udf_class_name(project_name, contract_name, call)
             content = call_dbt_model_sql_template \
-                .replace('{{DATABASE}}', project_name) \
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
-                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/{project_name}_udf.jar') \
+                .replace('{{UDF_JAR_PATH}}', f'{self.remote_workspace}/blockchain-dbt-udf.jar') \
                 .replace('{{CALL_ABI}}', json.dumps(call.raw_schema)) \
                 .replace('{{CALL_NAME}}', call.name) \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
@@ -366,8 +364,10 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
     @staticmethod
     def _get_event_udf_class_name(project_name: str, contract_name: str, event: ABIEventSchema):
-        return project_name + '_' + contract_name + '_' + event.name + '_' + 'EventDecodeUDF'
+        return project_name[0].upper() + project_name[1:] \
+               + '_' + contract_name + '_' + event.name + '_' + 'EventDecodeUDF'
 
     @staticmethod
     def _get_call_udf_class_name(project_name: str, contract_name: str, call: ABICallSchema):
-        return project_name + '_' + contract_name + '_' + call.name + '_' + 'CallDecodeUDF'
+        return project_name[0].upper() + project_name[1:] \
+               + '_' + contract_name + '_' + call.name + '_' + 'CallDecodeUDF'

@@ -58,7 +58,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             with open(java_filepath, 'r') as f:
                 content = f.read()
 
-            required_content = _read_resource('test_Test_AllTypeFunctionCallDecodeUDF.java')
+            required_content = _read_resource('Test_Test_AllTypeFunctionCallDecodeUDF.java')
 
             self.assertEqual(required_content, content)
 
@@ -80,7 +80,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             with open(java_filepath, 'r') as f:
                 content = f.read()
 
-            required_content = _read_resource('opensea_WyvernExchangeV2_OrderApprovedPartOneEventDecodeUDF.java')
+            required_content = _read_resource('Opensea_WyvernExchangeV2_OrderApprovedPartOneEventDecodeUDF.java')
 
             self.assertEqual(required_content, content)
 
