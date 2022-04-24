@@ -80,7 +80,7 @@ and selector = "{{EVENT_SELECTOR}}"
 and selector_hash = abs(hash("{{EVENT_SELECTOR}}")) % 10
 
 {% if is_incremental() %}
-  and dt = var('dt')
+  and dt = '{{ var("dt") }}'
 {% endif %}
 """
 
@@ -112,7 +112,7 @@ with base as (
     and selector_hash = abs(hash("{{EVENT_SELECTOR}}")) % 10
 
     {% if is_incremental() %}
-      and dt = var('dt')
+      and dt = '{{ var("dt") }}'
     {% endif %}
 ),
 
@@ -147,7 +147,7 @@ and selector = "{{CALL_SELECTOR}}"
 and selector_hash = abs(hash("{{CALL_SELECTOR}}")) % 10
 
 {% if is_incremental() %}
-  and dt = var('dt')
+  and dt = '{{ var("dt") }}'
 {% endif %}
 """
 
@@ -180,7 +180,7 @@ with base as (
     and selector_hash = abs(hash("{{CALL_SELECTOR}}")) % 10
 
     {% if is_incremental() %}
-      and dt = var('dt')
+      and dt = '{{ var("dt") }}'
     {% endif %}
 ),
 
