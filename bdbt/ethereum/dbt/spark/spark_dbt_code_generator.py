@@ -210,7 +210,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         super(SparkDbtCodeGenerator, self).__init__(True)
         self.remote_workspace = remote_workspace
 
-    def generate_event_dbt_model(
+    def gen_event_dbt_model(
             self,
             project_path: str,
             contract_name: str,
@@ -218,8 +218,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             event: ABIEventSchema
     ):
         project_name = pathlib.Path(project_path).name
-        model_name = f'{contract_name}_evt_{event.name}'
-        filepath = os.path.join(project_path, model_name + '.sql')
+        filepath = os.path.join(project_path, self.evt_model_file_name(project_name, contract_name, event) + '.sql')
         event_selector = encode_hex(event_abi_to_log_topic(event.raw_schema))
 
         if event.is_empty:
@@ -239,7 +238,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         self.create_file_and_write(filepath, content)
 
-    def generate_call_dbt_model(
+    def gen_call_dbt_model(
             self,
             project_path: str,
             contract_name: str,
@@ -247,8 +246,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             call: ABICallSchema
     ):
         project_name = pathlib.Path(project_path).name
-        model_name = f'{contract_name}_call_{call.name}'
-        filepath = os.path.join(project_path, model_name + '.sql')
+        filepath = os.path.join(project_path, self.call_model_file_name(project_name, contract_name, call) + '.sql')
         call_selector = encode_hex(encode_hex(function_abi_to_4byte_selector(call.raw_schema)))
 
         if call.is_empty:
@@ -268,7 +266,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         self.create_file_and_write(filepath, content)
 
-    def generate_event_udf(self, udf_workspace: str, project_name: str, contract_name: str, event: ABIEventSchema):
+    def gen_event_udf(self, udf_workspace: str, project_name: str, contract_name: str, event: ABIEventSchema):
         clazz_name = self._get_event_udf_class_name(project_name, contract_name, event)
         filepath = os.path.join(udf_workspace, clazz_name + '.java')
 
@@ -282,7 +280,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         self.create_file_and_write(filepath, content)
 
-    def generate_call_udf(self, udf_workspace: str, project_name: str, contract_name: str, call: ABICallSchema):
+    def gen_call_udf(self, udf_workspace: str, project_name: str, contract_name: str, call: ABICallSchema):
         clazz_name = self._get_call_udf_class_name(project_name, contract_name, call)
         filepath = os.path.join(udf_workspace, clazz_name + '.java')
 

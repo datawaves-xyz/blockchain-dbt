@@ -47,7 +47,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             abi = transformer.transform_abi(abi=raw_abi)
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
-            generator.generate_call_udf(
+            generator.gen_call_udf(
                 udf_workspace=tempdir,
                 project_name='test',
                 contract_name='Test',
@@ -69,7 +69,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             abi = transformer.transform_abi(abi=raw_abi)
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
-            generator.generate_event_udf(
+            generator.gen_event_udf(
                 udf_workspace=tempdir,
                 project_name='opensea',
                 contract_name='WyvernExchangeV2',
@@ -105,50 +105,52 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             project_path = os.path.join(tempdir, 'opensea')
 
             self.maxDiff = None
-            self.assertListEqual(
-                ['WyvernExchangeV2_call_staticCall.sql',
-                 'WyvernExchangeV2_call_minimumMakerProtocolFee.sql',
-                 'WyvernExchangeV2_evt_OrderCancelled.sql',
-                 'WyvernExchangeV2_call_cancelledOrFinalized.sql',
-                 'WyvernExchangeV2_call_cancelOrderWithNonce_.sql',
-                 'WyvernExchangeV2_call_DOMAIN_SEPARATOR.sql',
-                 'WyvernExchangeV2_evt_OrderApprovedPartOne.sql',
-                 'WyvernExchangeV2_call_guardedArrayReplace.sql',
-                 'WyvernExchangeV2_call_validateOrderParameters_.sql',
-                 'WyvernExchangeV2_call_name.sql',
-                 'WyvernExchangeV2_call_minimumTakerProtocolFee.sql',
-                 'WyvernExchangeV2_call_owner.sql',
-                 'WyvernExchangeV2_call_protocolFeeRecipient.sql',
-                 'WyvernExchangeV2_call_exchangeToken.sql',
-                 'WyvernExchangeV2_call_calculateMatchPrice_.sql',
-                 'WyvernExchangeV2_call_version.sql',
-                 'WyvernExchangeV2_call_approvedOrders.sql',
-                 'WyvernExchangeV2_call_approveOrder_.sql',
-                 'WyvernExchangeV2_call_incrementNonce.sql',
-                 'WyvernExchangeV2_call_transferOwnership.sql',
-                 'WyvernExchangeV2_evt_OwnershipRenounced.sql',
-                 'WyvernExchangeV2_call_registry.sql',
-                 'WyvernExchangeV2_call_codename.sql',
-                 'WyvernExchangeV2_call_renounceOwnership.sql',
-                 'WyvernExchangeV2_call_ordersCanMatch_.sql',
-                 'WyvernExchangeV2_call_calculateCurrentPrice_.sql',
-                 'WyvernExchangeV2_call_tokenTransferProxy.sql',
-                 'WyvernExchangeV2_call_hashToSign_.sql',
-                 'WyvernExchangeV2_call_changeProtocolFeeRecipient.sql',
-                 'WyvernExchangeV2_call_orderCalldataCanMatch.sql',
-                 'WyvernExchangeV2_evt_OwnershipTransferred.sql',
-                 'WyvernExchangeV2_call_nonces.sql',
-                 'WyvernExchangeV2_evt_OrdersMatched.sql',
-                 'WyvernExchangeV2_evt_NonceIncremented.sql',
-                 'WyvernExchangeV2_call_calculateFinalPrice.sql',
-                 'WyvernExchangeV2_call_cancelOrder_.sql',
-                 'WyvernExchangeV2_call_changeMinimumMakerProtocolFee.sql',
-                 'WyvernExchangeV2_call_changeMinimumTakerProtocolFee.sql',
-                 'WyvernExchangeV2_call_atomicMatch_.sql',
-                 'WyvernExchangeV2_evt_OrderApprovedPartTwo.sql',
-                 'WyvernExchangeV2_call_INVERSE_BASIS_POINT.sql',
-                 'WyvernExchangeV2_call_validateOrder_.sql',
-                 'WyvernExchangeV2_call_hashOrder_.sql'],
+            # Test that sequence first contains the same elements as second, regardless of their order.
+            # When they don’t, an error message listing the differences between the sequences will be generated.
+            self.assertCountEqual(
+                ['opensea_WyvernExchangeV2_call_staticCall.sql',
+                 'opensea_WyvernExchangeV2_call_minimumMakerProtocolFee.sql',
+                 'opensea_WyvernExchangeV2_evt_OrderCancelled.sql',
+                 'opensea_WyvernExchangeV2_call_cancelledOrFinalized.sql',
+                 'opensea_WyvernExchangeV2_call_cancelOrderWithNonce_.sql',
+                 'opensea_WyvernExchangeV2_call_DOMAIN_SEPARATOR.sql',
+                 'opensea_WyvernExchangeV2_evt_OrderApprovedPartOne.sql',
+                 'opensea_WyvernExchangeV2_call_guardedArrayReplace.sql',
+                 'opensea_WyvernExchangeV2_call_validateOrderParameters_.sql',
+                 'opensea_WyvernExchangeV2_call_name.sql',
+                 'opensea_WyvernExchangeV2_call_minimumTakerProtocolFee.sql',
+                 'opensea_WyvernExchangeV2_call_owner.sql',
+                 'opensea_WyvernExchangeV2_call_protocolFeeRecipient.sql',
+                 'opensea_WyvernExchangeV2_call_exchangeToken.sql',
+                 'opensea_WyvernExchangeV2_call_calculateMatchPrice_.sql',
+                 'opensea_WyvernExchangeV2_call_version.sql',
+                 'opensea_WyvernExchangeV2_call_approvedOrders.sql',
+                 'opensea_WyvernExchangeV2_call_approveOrder_.sql',
+                 'opensea_WyvernExchangeV2_call_incrementNonce.sql',
+                 'opensea_WyvernExchangeV2_call_transferOwnership.sql',
+                 'opensea_WyvernExchangeV2_evt_OwnershipRenounced.sql',
+                 'opensea_WyvernExchangeV2_call_registry.sql',
+                 'opensea_WyvernExchangeV2_call_codename.sql',
+                 'opensea_WyvernExchangeV2_call_renounceOwnership.sql',
+                 'opensea_WyvernExchangeV2_call_ordersCanMatch_.sql',
+                 'opensea_WyvernExchangeV2_call_calculateCurrentPrice_.sql',
+                 'opensea_WyvernExchangeV2_call_tokenTransferProxy.sql',
+                 'opensea_WyvernExchangeV2_call_hashToSign_.sql',
+                 'opensea_WyvernExchangeV2_call_changeProtocolFeeRecipient.sql',
+                 'opensea_WyvernExchangeV2_call_orderCalldataCanMatch.sql',
+                 'opensea_WyvernExchangeV2_evt_OwnershipTransferred.sql',
+                 'opensea_WyvernExchangeV2_call_nonces.sql',
+                 'opensea_WyvernExchangeV2_evt_OrdersMatched.sql',
+                 'opensea_WyvernExchangeV2_evt_NonceIncremented.sql',
+                 'opensea_WyvernExchangeV2_call_calculateFinalPrice.sql',
+                 'opensea_WyvernExchangeV2_call_cancelOrder_.sql',
+                 'opensea_WyvernExchangeV2_call_changeMinimumMakerProtocolFee.sql',
+                 'opensea_WyvernExchangeV2_call_changeMinimumTakerProtocolFee.sql',
+                 'opensea_WyvernExchangeV2_call_atomicMatch_.sql',
+                 'opensea_WyvernExchangeV2_evt_OrderApprovedPartTwo.sql',
+                 'opensea_WyvernExchangeV2_call_INVERSE_BASIS_POINT.sql',
+                 'opensea_WyvernExchangeV2_call_validateOrder_.sql',
+                 'opensea_WyvernExchangeV2_call_hashOrder_.sql'],
                 os.listdir(project_path)
             )
 
@@ -161,7 +163,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             pathlib.Path(project_path).mkdir()
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
-            generator.generate_event_dbt_model(
+            generator.gen_event_dbt_model(
                 project_path=project_path,
                 contract_name='WyvernExchangeV2',
                 contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
@@ -185,7 +187,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             pathlib.Path(project_path).mkdir()
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
-            generator.generate_call_dbt_model(
+            generator.gen_call_dbt_model(
                 project_path=project_path,
                 contract_name='WyvernExchangeV2',
                 contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',

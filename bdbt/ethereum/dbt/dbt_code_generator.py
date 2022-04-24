@@ -36,9 +36,9 @@ class DbtCodeGenerator:
         pathlib.Path(project_path).mkdir(parents=True, exist_ok=True)
 
         for event in abi.events:
-            self.generate_event_dbt_model(project_path, contract_name, contract_address, event)
+            self.gen_event_dbt_model(project_path, contract_name, contract_address, event)
         for call in abi.calls:
-            self.generate_call_dbt_model(project_path, contract_name, contract_address, call)
+            self.gen_call_dbt_model(project_path, contract_name, contract_address, call)
 
     def gen_udf_for_dbt(self, dbt_dir: str, abi_map: Dict[str, Dict[str, ABISchema]]):
         """
@@ -60,13 +60,13 @@ class DbtCodeGenerator:
         for proj_name, contract_name_to_abi in abi_map.items():
             for contract_name, abi in contract_name_to_abi.items():
                 for event in abi.nonempty_events:
-                    self.generate_event_udf(udf_workspace, proj_name, contract_name, event)
+                    self.gen_event_udf(udf_workspace, proj_name, contract_name, event)
                 for call in abi.nonempty_calls:
-                    self.generate_call_udf(udf_workspace, proj_name, contract_name, call)
+                    self.gen_call_udf(udf_workspace, proj_name, contract_name, call)
 
         self.build_udf(dbt_dir)
 
-    def generate_event_dbt_model(
+    def gen_event_dbt_model(
             self,
             project_path: str,
             contract_name: str,
@@ -75,7 +75,7 @@ class DbtCodeGenerator:
     ):
         raise NotImplementedError()
 
-    def generate_call_dbt_model(
+    def gen_call_dbt_model(
             self,
             project_path: str,
             contract_name: str,
@@ -84,10 +84,10 @@ class DbtCodeGenerator:
     ):
         raise NotImplementedError()
 
-    def generate_event_udf(self, udf_workspace: str, project_name, contract_name: str, event: ABIEventSchema):
+    def gen_event_udf(self, udf_workspace: str, project_name, contract_name: str, event: ABIEventSchema):
         raise NotImplementedError()
 
-    def generate_call_udf(self, udf_workspace: str, project_name, contract_name: str, call: ABICallSchema):
+    def gen_call_udf(self, udf_workspace: str, project_name, contract_name: str, call: ABICallSchema):
         raise NotImplementedError()
 
     def prepare_udf_workspace(self, dbt_dir: str) -> str:
@@ -95,3 +95,15 @@ class DbtCodeGenerator:
 
     def build_udf(self, dbt_dir: str):
         raise NotImplementedError()
+
+    @staticmethod
+    def evt_model_file_name(
+            project_name: str, contract_name: str, event: ABIEventSchema
+    ) -> str:
+        return f'{project_name}_{contract_name}_evt_{event.name}'
+
+    @staticmethod
+    def call_model_file_name(
+            project_name: str, contract_name: str, call: ABICallSchema
+    ) -> str:
+        return f'{project_name}_{contract_name}_call_{call.name}'
