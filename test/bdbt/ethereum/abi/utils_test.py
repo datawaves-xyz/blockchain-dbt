@@ -31,13 +31,13 @@ class UtilsTestCase(unittest.TestCase):
         self.assertEqual(True, func['constant'])
         self.assertEqual([], func['outputs'])
 
-        self.assertEqual(19, len(func['inputs']))
+        self.assertEqual(20, len(func['inputs']))
 
         input1: ABICallElement = func['inputs'][0]
         self.assertEqual('addr', input1['name'])
         self.assertEqual('address', input1['type'])
 
-        input18: ABICallElement = func['inputs'][18]
+        input18: ABICallElement = func['inputs'][19]
         self.assertEqual(2, len(input18['components']))
         c1: ABICallElement = input18['components'][0]
         self.assertEqual('value', c1['name'])

@@ -63,13 +63,14 @@ class ABITransformer:
         if arr_reg:
             element_type_str = atype_str[:arr_reg.start()]
             element_type = self.abi_type_mapping[element_type_str]
-            arr_length = int(atype_str[arr_reg.start() + 1: arr_reg.end()])
+            arr_str = atype_str[arr_reg.start(): arr_reg.end()]
+            arr_length = -1 if arr_str == '[]' else int(arr_str[1:-2])
             return ABIField(
                 name=name,
                 ftype=ABIArrayType(
                     element_type=element_type,
                     length=arr_length,
-                    canonical_type=f'{element_type.canonical_type}[{arr_length}]'
+                    canonical_type=f'{element_type.canonical_type}{arr_str}'
                 ),
                 metadata={'indexed': indexed}
             )
@@ -95,13 +96,14 @@ class ABITransformer:
         elif arr_reg:
             element_type_str = atype_str[:arr_reg.start()]
             element_type = self.abi_type_mapping[element_type_str]
-            arr_length = int(atype_str[arr_reg.start() + 1: arr_reg.end() - 1])
+            arr_str = atype_str[arr_reg.start(): arr_reg.end()]
+            arr_length = -1 if arr_str == '[]' else int(arr_str[1:-1])
             return ABIField(
                 name=name,
                 ftype=ABIArrayType(
                     element_type=element_type,
                     length=arr_length,
-                    canonical_type=f'{element_type.canonical_type}[{arr_length}]'
+                    canonical_type=f'{element_type.canonical_type}{arr_str}'
                 ),
             )
         else:

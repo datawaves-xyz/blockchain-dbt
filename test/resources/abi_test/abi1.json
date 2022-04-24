@@ -67,6 +67,10 @@
         "type": "int8[6]"
       },
       {
+        "name": "int_dynamic_array",
+        "type": "int256[]"
+      },
+      {
         "name": "bytes12_array",
         "type": "bytes12[2]"
       },

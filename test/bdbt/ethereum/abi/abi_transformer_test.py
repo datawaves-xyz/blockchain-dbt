@@ -74,6 +74,14 @@ class ABITransformerTestCase(unittest.TestCase):
         self.assertEqual(False, etype.unsigned)
         self.assertEqual(8, etype.bit_length)
 
+        atype: ABIArrayType = inputs_mapping_by_name['int_dynamic_array'].ftype
+        self.assertEqual("int256[]", atype.canonical_type)
+        self.assertEqual(-1, atype.length)
+        etype: ABIIntType = atype.element_type
+        self.assertEqual("int256", etype.canonical_type)
+        self.assertEqual(False, etype.unsigned)
+        self.assertEqual(256, etype.bit_length)
+
         atype: ABIArrayType = inputs_mapping_by_name['bytes12_array'].ftype
         self.assertEqual("bytes12[2]", atype.canonical_type)
         self.assertEqual(2, atype.length)
