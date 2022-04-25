@@ -9,6 +9,7 @@ from typing import Dict, cast, List
 
 import pyaml
 import ruamel.yaml
+import yaml
 
 from bdbt.cli.content import Contract
 from bdbt.ethereum.abi.abi_data_type import ABISchema
@@ -69,6 +70,7 @@ class DbtGenerator:
                     project_name=project,
                     contract_name=contract['name'],
                     contract_address=contract['address'],
+                    version=self.version,
                     abi=self._transformer.transform_abi(contract['abi'])
                 )
 
@@ -112,7 +114,7 @@ class DbtGenerator:
             for contract in contracts:
                 abi_map[project][contract['name']] = self._transformer.transform_abi(contract['abi'])
 
-        self._codegen.gen_udf_for_dbt(self._dbt_dir, abi_map)
+        self._codegen.gen_udf_for_dbt(self._dbt_dir, abi_map, self.version)
         self._logger.info('generate a UDF dependency.')
 
     def _replenish_project_yml(self):
@@ -139,32 +141,44 @@ class DbtGenerator:
 
         database_conf['codegen'] = projects_dict
 
-        yaml = ruamel.yaml.YAML()
-        yaml.indent(mapping=ind, sequence=ind, offset=bsi)
+        y = ruamel.yaml.YAML()
+        y.indent(mapping=ind, sequence=ind, offset=bsi)
         with open(self.dbt_project_yml, 'w') as nf:
-            yaml.dump(project_conf, nf)
+            y.dump(project_conf, nf)
 
         self._logger.info('replenish dbt_project.yml with all project configs.')
 
     @property
-    def contracts_dir(self):
+    def contracts_dir(self) -> str:
         return os.path.join(self._dbt_dir, 'contracts')
 
     @property
-    def model_dir(self):
+    def model_dir(self) -> str:
         return os.path.join(self._dbt_dir, 'models')
 
     @property
-    def codegen_dir(self):
+    def codegen_dir(self) -> str:
         return os.path.join(self.model_dir, 'codegen')
 
     @property
-    def dbt_project_yml(self):
+    def dbt_project_yml(self) -> str:
         return os.path.join(self._dbt_dir, 'dbt_project.yml')
 
     @property
-    def new_dbt_project_yml(self):
+    def new_dbt_project_yml(self) -> str:
         return os.path.join(self._dbt_dir, 'new_dbt_project.yml')
+
+    @functools.cached_property
+    def version(self) -> str:
+        dbt_project_yml = os.path.join(self._dbt_dir, 'dbt_project.yml')
+        with open(dbt_project_yml, 'r') as f:
+            project_conf: Dict[str, any] = yaml.safe_load(f)
+            dbt_version: str = project_conf['version']
+
+        if dbt_version is None:
+            raise ValueError('dbt_project.yml should contains the version field.')
+
+        return dbt_version
 
     @functools.cached_property
     def project_dirs(self):

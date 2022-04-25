@@ -34,7 +34,8 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.gen_udf_for_dbt(
                 dbt_dir=tempdir,
-                abi_map={'opensea': {'WyvernExchangeV2': abi}}
+                abi_map={'opensea': {'WyvernExchangeV2': abi}},
+                version='0.1.0'
             )
 
             self.assertEqual(2, len(os.listdir(tempdir)))
@@ -96,7 +97,8 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
                 project_name='opensea',
                 contract_name='WyvernExchangeV2',
                 contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
-                abi=abi
+                abi=abi,
+                version='0.1.0'
             )
 
             self.assertEqual(1, len(os.listdir(tempdir)))
@@ -167,6 +169,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
                 project_path=project_path,
                 contract_name='WyvernExchangeV2',
                 contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                version='0.1.0',
                 event=[i for i in abi.events if i.name == 'OrderApprovedPartOne'][0]
             )
 
@@ -191,6 +194,7 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
                 project_path=project_path,
                 contract_name='WyvernExchangeV2',
                 contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                version='0.1.0',
                 call=[i for i in abi.calls if i.name == 'atomicMatch_'][0]
             )
 

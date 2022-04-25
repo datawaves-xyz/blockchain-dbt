@@ -5,7 +5,7 @@
         partition_by=['dt'],
         file_format='parquet',
         pre_hook={
-            'sql': 'create or replace function opensea_wyvernexchangev2_orderapprovedpartone_eventdecodeudf as "io.iftech.sparkudf.hive.Opensea_WyvernExchangeV2_OrderApprovedPartOne_EventDecodeUDF" using jar "s3a://test/blockchain-dbt-udf.jar";'
+            'sql': 'create or replace function opensea_wyvernexchangev2_orderapprovedpartone_eventdecodeudf as "io.iftech.sparkudf.hive.Opensea_WyvernExchangeV2_OrderApprovedPartOne_EventDecodeUDF" using jar "s3a://test/blockchain-dbt-udf-0.1.0.jar";'
         }
     )
 }}
