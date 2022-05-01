@@ -80,7 +80,7 @@ select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     transaction_hash as evt_tx_hash,
     address as contract_address,
     dt
-from {{ ref('stg_ethereum__logs') }}
+from {{ ref('stg_logs') }}
 where address = lower("{{CONTRACT_ADDRESS}}")
 and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
 and selector = "{{EVENT_SELECTOR}}"
@@ -111,7 +111,7 @@ with base as (
         address as contract_address,
         dt,
         {{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
-    from {{ ref('stg_ethereum__logs') }}
+    from {{ ref('stg_logs') }}
     where address = lower("{{CONTRACT_ADDRESS}}")
     and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
     and selector = "{{EVENT_SELECTOR}}"
@@ -154,7 +154,7 @@ select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     transaction_hash as call_tx_hash,
     to_address as contract_address,
     dt
-from {{ ref('stg_ethereum__traces') }}
+from {{ ref('stg_traces') }}
 where to_address = lower("{{CONTRACT_ADDRESS}}")
 and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
 and selector = "{{CALL_SELECTOR}}"
@@ -186,7 +186,7 @@ with base as (
         to_address as contract_address,
         dt,
         {{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
-    from {{ ref('stg_ethereum__traces') }}
+    from {{ ref('stg_traces') }}
     where to_address = lower("{{CONTRACT_ADDRESS}}")
     and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
     and selector = "{{CALL_SELECTOR}}"

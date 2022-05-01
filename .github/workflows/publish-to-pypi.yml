@@ -23,7 +23,6 @@ jobs:
         run: python setup.py sdist
 
       - name: Publish distribution to PyPI
-        if: startsWith(github.event.ref, 'refs/tags/pypi-v')
         uses: pypa/gh-action-pypi-publish@master
         with:
           password: ${{ secrets.pypi_password }}
