@@ -73,7 +73,7 @@ empty_event_dbt_model_sql_template = """{{
     )
 }}
 
-select /* REPARTITION(dt) */
+select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     block_number as evt_block_number,
     block_timestamp as evt_block_time,
     log_index as evt_index,
@@ -134,7 +134,7 @@ final as (
     from base
 )
 
-select /* REPARTITION(dt) */ *
+select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */ *
 from final
 """
 
@@ -146,7 +146,7 @@ empty_call_dbt_model_sql_template = """{{
     )
 }}
 
-select /* REPARTITION(dt) */
+select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     status==1 as call_success,
     block_number as call_block_number,
     block_timestamp as call_block_time,
@@ -211,7 +211,7 @@ final as (
     from base
 )
 
-select /* REPARTITION(dt) */ *
+select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */ *
 from final
 """
 
@@ -246,7 +246,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
                 .replace('{{EVENT_SELECTOR}}', event_selector) \
                 .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
-                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
+                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
         else:
             clazz_name = self._event_udf_class_name(project_name, contract_name, event)
             content = event_dbt_model_sql_template \
@@ -258,7 +259,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
                 .replace('{{EVENT_SELECTOR}}', event_selector) \
                 .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
-                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
+                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
 
         self.create_file_and_write(filepath, content)
 
@@ -282,7 +284,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
                 .replace('{{CALL_SELECTOR}}', call_selector) \
                 .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
-                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
+                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
         else:
             clazz_name = self._call_udf_class_name(project_name, contract_name, call)
             content = call_dbt_model_sql_template \
@@ -294,7 +297,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
                 .replace('{{CALL_SELECTOR}}', call_selector[0:10]) \
                 .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
-                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
+                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
 
         self.create_file_and_write(filepath, content)
 
@@ -409,10 +413,19 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         return f'blockchain-dbt-udf-{version}.jar'
 
     @staticmethod
-    def _materialized_config(model: str) -> str:
-        if model == 'table':
+    def _materialized_config(materialize: str) -> str:
+        if materialize == 'table':
             return table_model_config
-        elif model == 'increment':
+        elif materialize == 'increment':
             return increment_model_config
         else:
-            raise ValueError(f'{model} isnt a supported materialized model.')
+            raise ValueError(f'{materialize} isnt a supported materialized model.')
+
+    @staticmethod
+    def _repartition_count(materialize: str) -> str:
+        if materialize == 'table':
+            return '1'
+        elif materialize == 'increment':
+            return 'dt'
+        else:
+            raise ValueError(f'{materialize} isnt a supported materialized model.')
