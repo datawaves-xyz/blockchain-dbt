@@ -7,3 +7,5 @@ class Contract(TypedDict, total=False):
     abi: ABI
     address: str
     name: str
+    # table / increment
+    materialize: str

@@ -1,8 +1,9 @@
 import logging
 import os.path
 import pathlib
-from typing import Dict
+from typing import Dict, Optional
 
+from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_data_type import ABISchema, ABIEventSchema, ABICallSchema
 
 
@@ -24,10 +25,9 @@ class DbtCodeGenerator:
             self,
             workspace: str,
             project_name: str,
-            contract_name: str,
-            contract_address: str,
+            contract: Contract,
             version: str,
-            abi: ABISchema
+            abi: ABISchema,
     ):
         """
         Generate some dbt model sql files and schema yaml file,
@@ -37,9 +37,9 @@ class DbtCodeGenerator:
         pathlib.Path(project_path).mkdir(parents=True, exist_ok=True)
 
         for event in abi.events:
-            self.gen_event_dbt_model(project_path, contract_name, contract_address, version, event)
+            self.gen_event_dbt_model(project_path, contract, version, event)
         for call in abi.calls:
-            self.gen_call_dbt_model(project_path, contract_name, contract_address, version, call)
+            self.gen_call_dbt_model(project_path, contract, version, call)
 
     def gen_udf_for_dbt(
             self,
@@ -76,8 +76,7 @@ class DbtCodeGenerator:
     def gen_event_dbt_model(
             self,
             project_path: str,
-            contract_name: str,
-            contract_address: str,
+            contract: Contract,
             version: str,
             event: ABIEventSchema
     ):
@@ -86,8 +85,7 @@ class DbtCodeGenerator:
     def gen_call_dbt_model(
             self,
             project_path: str,
-            contract_name: str,
-            contract_address: str,
+            contract: Contract,
             version: str,
             call: ABICallSchema
     ):
@@ -114,13 +112,15 @@ class DbtCodeGenerator:
         raise NotImplementedError()
 
     @staticmethod
-    def evt_model_file_name(
-            project_name: str, contract_name: str, event: ABIEventSchema
+    def evt_model_name(
+            contract_name: str, event: ABIEventSchema, project_name: Optional[str] = None,
     ) -> str:
-        return f'{project_name}_{contract_name}_evt_{event.name}'
+        return f'{project_name}_{contract_name}_evt_{event.name}' \
+            if project_name is not None else f'{contract_name}_evt_{event.name}'
 
     @staticmethod
-    def call_model_file_name(
-            project_name: str, contract_name: str, call: ABICallSchema
+    def call_model_name(
+            contract_name: str, call: ABICallSchema, project_name: Optional[str] = None
     ) -> str:
-        return f'{project_name}_{contract_name}_call_{call.name}'
+        return f'{project_name}_{contract_name}_call_{call.name}' \
+            if project_name is not None else f'{contract_name}_call_{call.name}'

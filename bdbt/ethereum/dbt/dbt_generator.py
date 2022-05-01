@@ -11,7 +11,7 @@ import pyaml
 import ruamel.yaml
 import yaml
 
-from bdbt.cli.content import Contract
+from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_data_type import ABISchema
 from bdbt.ethereum.abi.abi_transformer import ABITransformer
 from bdbt.ethereum.dbt.dbt_code_generator import DbtCodeGenerator as CG
@@ -68,8 +68,7 @@ class DbtGenerator:
                 self._codegen.gen_models_for_project(
                     workspace=self.codegen_dir,
                     project_name=project,
-                    contract_name=contract['name'],
-                    contract_address=contract['address'],
+                    contract=contract,
                     version=self.version,
                     abi=self._transformer.transform_abi(contract['abi'])
                 )
@@ -81,14 +80,14 @@ class DbtGenerator:
                 for event in abi.events:
                     columns = [DbtColumn(name=i.name) for i in event.inputs]
                     columns.extend(DbtColumn(name=i) for i in evt_base_column)
-                    models.append(DbtTable(name=CG.evt_model_file_name(project, contract['name'], event),
+                    models.append(DbtTable(name=CG.evt_model_name(contract['name'], event, project),
                                            columns=columns))
 
                 for call in abi.calls:
                     columns = [DbtColumn(name=i.name) for i in call.inputs]
                     columns.extend([DbtColumn(name=i.name) for i in call.outputs])
                     columns.extend(DbtColumn(name=i) for i in call_base_column)
-                    models.append(DbtTable(name=CG.call_model_file_name(project, contract['name'], call),
+                    models.append(DbtTable(name=CG.call_model_name(contract['name'], call, project),
                                            columns=columns))
 
             schema = DbtModelSchema(models=models)

@@ -6,6 +6,7 @@ import unittest
 from typing import AnyStr
 
 import test
+from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_transformer import ABITransformer
 from bdbt.ethereum.abi.utils import normalize_abi
 from bdbt.ethereum.dbt.spark.spark_dbt_code_generator import SparkDbtCodeGenerator
@@ -90,13 +91,18 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             transformer = ABITransformer()
             raw_abi = normalize_abi(_read_resource('wyvern_exchange_v2_abi.json'))
             abi = transformer.transform_abi(abi=raw_abi)
+            contract = Contract(
+                name='WyvernExchangeV2',
+                address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                materialize='increment',
+                abi=raw_abi
+            )
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.gen_models_for_project(
                 workspace=tempdir,
                 project_name='opensea',
-                contract_name='WyvernExchangeV2',
-                contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                contract=contract,
                 abi=abi,
                 version='0.1.0'
             )
@@ -163,12 +169,17 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             abi = transformer.transform_abi(abi=raw_abi)
             project_path = os.path.join(tempdir, 'opensea')
             pathlib.Path(project_path).mkdir()
+            contract = Contract(
+                name='WyvernExchangeV2',
+                address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                materialize='table',
+                abi=raw_abi
+            )
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.gen_event_dbt_model(
                 project_path=project_path,
-                contract_name='WyvernExchangeV2',
-                contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                contract=contract,
                 version='0.1.0',
                 event=[i for i in abi.events if i.name == 'OrderApprovedPartOne'][0]
             )
@@ -188,12 +199,17 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             abi = transformer.transform_abi(abi=raw_abi)
             project_path = os.path.join(tempdir, 'opensea')
             pathlib.Path(project_path).mkdir()
+            contract = Contract(
+                name='WyvernExchangeV2',
+                address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                materialize='increment',
+                abi=raw_abi
+            )
 
             generator = SparkDbtCodeGenerator(self.remote_workspace)
             generator.gen_call_dbt_model(
                 project_path=project_path,
-                contract_name='WyvernExchangeV2',
-                contract_address='0x7f268357a8c2552623316e2562d90e642bb538e5',
+                contract=contract,
                 version='0.1.0',
                 call=[i for i in abi.calls if i.name == 'atomicMatch_'][0]
             )

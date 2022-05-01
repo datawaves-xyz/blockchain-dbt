@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 
 from eth_utils import event_abi_to_log_topic, encode_hex, function_abi_to_4byte_selector
 
+from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_data_type import ABIEventSchema, ABICallSchema
 from bdbt.ethereum.abi.provider.hive_object_inspector_type_provider import HiveObjectInspectorTypeProvider
 from bdbt.ethereum.dbt.dbt_code_generator import DbtCodeGenerator
@@ -64,7 +65,15 @@ public class {{CLASS_NAME}} extends DecodeContractFunctionHiveUDF {
 }
 """
 
-empty_event_dbt_model_sql_template = """select /* REPARTITION(dt) */
+empty_event_dbt_model_sql_template = """{{
+    config(
+        {{MODEL_MATERIALIZED_CONFIG}},
+        file_format='parquet',
+        alias='{{MODEL_ALIAS}}'
+    )
+}}
+
+select /* REPARTITION(dt) */
     block_number as evt_block_number,
     block_timestamp as evt_block_time,
     log_index as evt_index,
@@ -84,10 +93,9 @@ and selector_hash = abs(hash("{{EVENT_SELECTOR}}")) % 10
 
 event_dbt_model_sql_template = """{{
     config(
-        materialized='incremental',
-        incremental_strategy='insert_overwrite',
-        partition_by=['dt'],
+        {{MODEL_MATERIALIZED_CONFIG}},
         file_format='parquet',
+        alias='{{MODEL_ALIAS}}',
         pre_hook={
             'sql': 'create or replace function {{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
@@ -130,7 +138,15 @@ select /* REPARTITION(dt) */ *
 from final
 """
 
-empty_call_dbt_model_sql_template = """select /* REPARTITION(dt) */
+empty_call_dbt_model_sql_template = """{{
+    config(
+        {{MODEL_MATERIALIZED_CONFIG}},
+        file_format='parquet',
+        alias='{{MODEL_ALIAS}}'
+    )
+}}
+
+select /* REPARTITION(dt) */
     status==1 as call_success,
     block_number as call_block_number,
     block_timestamp as call_block_time,
@@ -151,10 +167,9 @@ and selector_hash = abs(hash("{{CALL_SELECTOR}}")) % 10
 
 call_dbt_model_sql_template = """{{
     config(
-        materialized='incremental',
-        incremental_strategy='insert_overwrite',
-        partition_by=['dt'],
+        {{MODEL_MATERIALIZED_CONFIG}},
         file_format='parquet',
+        alias='{{MODEL_ALIAS}}',
         pre_hook={
             'sql': 'create or replace function {{UDF_NAME}} as "io.iftech.sparkudf.hive.{{CLASS_NAME}}" using jar "{{UDF_JAR_PATH}}";'
         }
@@ -200,6 +215,9 @@ select /* REPARTITION(dt) */ *
 from final
 """
 
+table_model_config = "materialized='table'"
+increment_model_config = "materialized='incremental', incremental_strategy='insert_overwrite', partition_by=['dt']"
+
 
 class SparkDbtCodeGenerator(DbtCodeGenerator):
     hive_provider = HiveObjectInspectorTypeProvider()
@@ -211,19 +229,24 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
     def gen_event_dbt_model(
             self,
             project_path: str,
-            contract_name: str,
-            contract_address: str,
+            contract: Contract,
             version: str,
             event: ABIEventSchema
     ) -> None:
+        contract_name = contract['name']
+        contract_address = contract['address']
+        contract_materialize = contract['materialize']
+
         project_name = pathlib.Path(project_path).name
-        filepath = os.path.join(project_path, self.evt_model_file_name(project_name, contract_name, event) + '.sql')
+        filepath = os.path.join(project_path, self.evt_model_name(contract_name, event, project_name) + '.sql')
         event_selector = encode_hex(event_abi_to_log_topic(event.raw_schema))
 
         if event.is_empty:
             content = event_dbt_model_sql_template \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{EVENT_SELECTOR}}', event_selector)
+                .replace('{{EVENT_SELECTOR}}', event_selector) \
+                .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
         else:
             clazz_name = self._event_udf_class_name(project_name, contract_name, event)
             content = event_dbt_model_sql_template \
@@ -233,26 +256,33 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{EVENT_ABI}}', json.dumps(event.raw_schema)) \
                 .replace('{{EVENT_NAME}}', event.name) \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{EVENT_SELECTOR}}', event_selector)
+                .replace('{{EVENT_SELECTOR}}', event_selector) \
+                .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
 
         self.create_file_and_write(filepath, content)
 
     def gen_call_dbt_model(
             self,
             project_path: str,
-            contract_name: str,
-            contract_address: str,
+            contract: Contract,
             version: str,
             call: ABICallSchema
     ) -> None:
+        contract_name = contract['name']
+        contract_address = contract['address']
+        contract_materialize = contract['materialize']
+
         project_name = pathlib.Path(project_path).name
-        filepath = os.path.join(project_path, self.call_model_file_name(project_name, contract_name, call) + '.sql')
+        filepath = os.path.join(project_path, self.call_model_name(contract_name, call, project_name) + '.sql')
         call_selector = encode_hex(encode_hex(function_abi_to_4byte_selector(call.raw_schema)))
 
         if call.is_empty:
             content = empty_call_dbt_model_sql_template \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{CALL_SELECTOR}}', call_selector)
+                .replace('{{CALL_SELECTOR}}', call_selector) \
+                .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
         else:
             clazz_name = self._call_udf_class_name(project_name, contract_name, call)
             content = call_dbt_model_sql_template \
@@ -262,7 +292,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{CALL_ABI}}', json.dumps(call.raw_schema)) \
                 .replace('{{CALL_NAME}}', call.name) \
                 .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{CALL_SELECTOR}}', call_selector[0:10])
+                .replace('{{CALL_SELECTOR}}', call_selector[0:10]) \
+                .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
+                .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize))
 
         self.create_file_and_write(filepath, content)
 
@@ -375,3 +407,12 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
     @staticmethod
     def _jar_name(version: str) -> str:
         return f'blockchain-dbt-udf-{version}.jar'
+
+    @staticmethod
+    def _materialized_config(model: str) -> str:
+        if model == 'table':
+            return table_model_config
+        elif model == 'increment':
+            return increment_model_config
+        else:
+            raise ValueError(f'{model} isnt a supported materialized model.')
