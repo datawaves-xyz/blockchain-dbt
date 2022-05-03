@@ -22,8 +22,8 @@ with base as (
     from {{ ref('stg_traces') }}
     where to_address = lower("0x7f268357a8c2552623316e2562d90e642bb538e5")
     and address_hash = abs(hash(lower("0x7f268357a8c2552623316e2562d90e642bb538e5"))) % 10
-    and selector = "0x30786162"
-    and selector_hash = abs(hash("0x30786162")) % 10
+    and selector = "0xab834bab"
+    and selector_hash = abs(hash("0xab834bab")) % 10
 
     {% if is_incremental() %}
       and dt = '{{ var("dt") }}'
