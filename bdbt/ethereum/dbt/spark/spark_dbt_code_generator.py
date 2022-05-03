@@ -277,7 +277,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         project_name = pathlib.Path(project_path).name
         filepath = os.path.join(project_path, self.call_model_name(contract_name, call, project_name) + '.sql')
-        call_selector = encode_hex(encode_hex(function_abi_to_4byte_selector(call.raw_schema)))
+        call_selector = encode_hex(function_abi_to_4byte_selector(call.raw_schema))
 
         if call.is_empty:
             content = empty_call_dbt_model_sql_template \
