@@ -44,5 +44,5 @@ final as (
     from base
 )
 
-select /* REPARTITION(dt) */ *
+select /*+ REPARTITION(dt) */ *
 from final

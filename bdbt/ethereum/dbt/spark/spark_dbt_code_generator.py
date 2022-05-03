@@ -73,7 +73,7 @@ empty_event_dbt_model_sql_template = """{{
     )
 }}
 
-select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */
+select /*+ REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     block_number as evt_block_number,
     block_timestamp as evt_block_time,
     log_index as evt_index,
@@ -134,7 +134,7 @@ final as (
     from base
 )
 
-select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */ *
+select /*+ REPARTITION({{MODEL_REPARTITION_COUNT}}) */ *
 from final
 """
 
@@ -146,7 +146,7 @@ empty_call_dbt_model_sql_template = """{{
     )
 }}
 
-select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */
+select /*+ REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     status==1 as call_success,
     block_number as call_block_number,
     block_timestamp as call_block_time,
@@ -211,7 +211,7 @@ final as (
     from base
 )
 
-select /* REPARTITION({{MODEL_REPARTITION_COUNT}}) */ *
+select /*+ REPARTITION({{MODEL_REPARTITION_COUNT}}) */ *
 from final
 """
 
