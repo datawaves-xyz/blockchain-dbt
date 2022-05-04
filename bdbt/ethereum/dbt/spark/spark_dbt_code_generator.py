@@ -423,8 +423,11 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
     @staticmethod
     def _repartition_count(materialize: str) -> str:
+        # the best partition size in the Spark is 100-200MB,
+        # combining the number of files and the file size,
+        # 50 is more suitable for the current data size (the largest table is probably 10G)
         if materialize == 'table':
-            return '1'
+            return '50'
         elif materialize == 'increment':
             return 'dt'
         else:
