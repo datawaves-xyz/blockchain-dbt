@@ -14,14 +14,7 @@ from bdbt.ethereum.abi.provider.data_type_provider import DataTypeProvider
 
 class HiveObjectInspectorTypeProvider(DataTypeProvider[str]):
     def transform_from_int_type(self, atype: ABIIntType) -> str:
-        signed_bit_length = atype.bit_length + atype.unsigned
-
-        if 0 < signed_bit_length <= 32:
-            return 'PrimitiveObjectInspectorFactory.writableIntObjectInspector'
-        elif 32 < signed_bit_length <= 64:
-            return 'PrimitiveObjectInspectorFactory.writableLongObjectInspector'
-        elif 64 < signed_bit_length:
-            return 'PrimitiveObjectInspectorFactory.writableHiveDecimalObjectInspector'
+        return 'PrimitiveObjectInspectorFactory.writableStringObjectInspector'
 
     def transform_from_string_type(self, atype: ABIStringType) -> str:
         return 'PrimitiveObjectInspectorFactory.writableStringObjectInspector'
@@ -33,7 +26,7 @@ class HiveObjectInspectorTypeProvider(DataTypeProvider[str]):
         return 'PrimitiveObjectInspectorFactory.writableBooleanObjectInspector'
 
     def transform_from_fixed_type(self, atype: ABIFixedType) -> str:
-        return 'PrimitiveObjectInspectorFactory.writableHiveDecimalObjectInspector'
+        return 'PrimitiveObjectInspectorFactory.writableStringObjectInspector'
 
     def transform_from_bytes_type(self, atype: ABIBytesType) -> str:
         return 'PrimitiveObjectInspectorFactory.writableBinaryObjectInspector'
