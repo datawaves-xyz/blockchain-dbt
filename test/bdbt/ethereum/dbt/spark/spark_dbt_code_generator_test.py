@@ -221,3 +221,32 @@ class SparkDbtCodeGeneratorTestCase(unittest.TestCase):
             required_content = _read_resource('WyvernExchange_call_atomicMatch_dbt_sql')
 
             self.assertEqual(required_content, content)
+
+    def test_generate_evt_mode_without_contract_address(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            transformer = ABITransformer()
+            raw_abi = normalize_abi(_read_resource('erc1155_abi.json'))
+            abi = transformer.transform_abi(abi=raw_abi)
+            project_path = os.path.join(tempdir, 'opensea')
+            pathlib.Path(project_path).mkdir()
+            contract = Contract(
+                name='ERC1155',
+                materialize='table',
+                abi=raw_abi
+            )
+
+            generator = SparkDbtCodeGenerator(self.remote_workspace)
+            generator.gen_event_dbt_model(
+                project_path=project_path,
+                contract=contract,
+                version='0.1.0',
+                event=[i for i in abi.events if i.name == 'TransferBatch'][0]
+            )
+
+            model_filepath = os.path.join(project_path, os.listdir(project_path)[0])
+            with open(model_filepath, 'r') as f:
+                content = f.read()
+
+            required_content = _read_resource('ERC1155_call_TransferBatch_dbt_sql')
+
+            self.assertEqual(required_content, content)

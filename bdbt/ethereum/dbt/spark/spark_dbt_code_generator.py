@@ -81,10 +81,7 @@ select /*+ REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     address as contract_address,
     dt
 from {{ ref('stg_logs') }}
-where address = lower("{{CONTRACT_ADDRESS}}")
-and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
-and selector = "{{EVENT_SELECTOR}}"
-and selector_hash = abs(hash("{{EVENT_SELECTOR}}")) % 10
+where {{SELECT_CONDITION}}
 
 {% if is_incremental() %}
   and dt = '{{ var("dt") }}'
@@ -112,10 +109,7 @@ with base as (
         dt,
         {{UDF_NAME}}(unhex_data, topics_arr, '{{EVENT_ABI}}', '{{EVENT_NAME}}') as data
     from {{ ref('stg_logs') }}
-    where address = lower("{{CONTRACT_ADDRESS}}")
-    and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
-    and selector = "{{EVENT_SELECTOR}}"
-    and selector_hash = abs(hash("{{EVENT_SELECTOR}}")) % 10
+    where {{SELECT_CONDITION}}
 
     {% if is_incremental() %}
       and dt = '{{ var("dt") }}'
@@ -155,10 +149,7 @@ select /*+ REPARTITION({{MODEL_REPARTITION_COUNT}}) */
     to_address as contract_address,
     dt
 from {{ ref('stg_traces') }}
-where to_address = lower("{{CONTRACT_ADDRESS}}")
-and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
-and selector = "{{CALL_SELECTOR}}"
-and selector_hash = abs(hash("{{CALL_SELECTOR}}")) % 10
+where {{SELECT_CONDITION}}
 
 {% if is_incremental() %}
   and dt = '{{ var("dt") }}'
@@ -187,10 +178,7 @@ with base as (
         dt,
         {{UDF_NAME}}(unhex_input, unhex_output, '{{CALL_ABI}}', '{{CALL_NAME}}') as data
     from {{ ref('stg_traces') }}
-    where to_address = lower("{{CONTRACT_ADDRESS}}")
-    and address_hash = abs(hash(lower("{{CONTRACT_ADDRESS}}"))) % 10
-    and selector = "{{CALL_SELECTOR}}"
-    and selector_hash = abs(hash("{{CALL_SELECTOR}}")) % 10
+    where {{SELECT_CONDITION}}
 
     {% if is_incremental() %}
       and dt = '{{ var("dt") }}'
@@ -234,17 +222,14 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             event: ABIEventSchema
     ) -> None:
         contract_name = contract['name']
-        contract_address = contract['address']
         contract_materialize = contract['materialize']
 
         project_name = pathlib.Path(project_path).name
         filepath = os.path.join(project_path, self.evt_model_name(contract_name, event, project_name) + '.sql')
-        event_selector = encode_hex(event_abi_to_log_topic(event.raw_schema))
 
         if event.is_empty:
             content = event_dbt_model_sql_template \
-                .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{EVENT_SELECTOR}}', event_selector) \
+                .replace('{{SELECT_CONDITION}}', self._select_evt_condition(contract, event)) \
                 .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
                 .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
@@ -256,8 +241,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{UDF_JAR_PATH}}', os.path.join(self.remote_workspace, self._jar_name(version))) \
                 .replace('{{EVENT_ABI}}', json.dumps(event.raw_schema)) \
                 .replace('{{EVENT_NAME}}', event.name) \
-                .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{EVENT_SELECTOR}}', event_selector) \
+                .replace('{{SELECT_CONDITION}}', self._select_evt_condition(contract, event)) \
                 .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
                 .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
@@ -272,17 +256,14 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             call: ABICallSchema
     ) -> None:
         contract_name = contract['name']
-        contract_address = contract['address']
         contract_materialize = contract['materialize']
 
         project_name = pathlib.Path(project_path).name
         filepath = os.path.join(project_path, self.call_model_name(contract_name, call, project_name) + '.sql')
-        call_selector = encode_hex(function_abi_to_4byte_selector(call.raw_schema))
 
         if call.is_empty:
             content = empty_call_dbt_model_sql_template \
-                .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{CALL_SELECTOR}}', call_selector) \
+                .replace('{{SELECT_CONDITION}}', self._select_call_condition(contract, call)) \
                 .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
                 .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
@@ -294,8 +275,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{UDF_JAR_PATH}}', os.path.join(self.remote_workspace, self._jar_name(version))) \
                 .replace('{{CALL_ABI}}', json.dumps(call.raw_schema)) \
                 .replace('{{CALL_NAME}}', call.name) \
-                .replace('{{CONTRACT_ADDRESS}}', contract_address) \
-                .replace('{{CALL_SELECTOR}}', call_selector[0:10]) \
+                .replace('{{SELECT_CONDITION}}', self._select_call_condition(contract, call)) \
                 .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
                 .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
@@ -432,3 +412,33 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             return 'dt'
         else:
             raise ValueError(f'{materialize} isnt a supported materialized model.')
+
+    @staticmethod
+    def _select_call_condition(contract: Contract, call: ABICallSchema) -> str:
+        conditions = []
+        if 'address' in contract and contract['address'] is not None:
+            conditions.append(
+                f"""to_address = lower("{contract['address']}") and address_hash = abs(hash(lower("{contract['address']}"))) % 10"""
+            )
+
+        selector = encode_hex(function_abi_to_4byte_selector(call.raw_schema))[0:10]
+        conditions.append(
+            f"""selector = "{selector}" and selector_hash = abs(hash("{selector}")) % 10"""
+        )
+
+        return ' and '.join(conditions)
+
+    @staticmethod
+    def _select_evt_condition(contract: Contract, evt: ABIEventSchema) -> str:
+        conditions = []
+        if 'address' in contract and contract['address'] is not None:
+            conditions.append(
+                f"""address = lower("{contract['address']}") and address_hash = abs(hash(lower("{contract['address']}"))) % 10"""
+            )
+
+        selector = encode_hex(event_abi_to_log_topic(evt.raw_schema))
+        conditions.append(
+            f"""selector = "{selector}" and selector_hash = abs(hash("{selector}")) % 10"""
+        )
+
+        return ' and '.join(conditions)
