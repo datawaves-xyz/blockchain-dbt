@@ -30,7 +30,7 @@ class ABITransformerTestCase(unittest.TestCase):
     def test_transform_abi_call(self):
         transformer = ABITransformer()
         abi = normalize_abi(_read_resource('abi1.json'))
-        call_schema = transformer.transform_abi_call(abi=abi, call_name='AllTypeFunction')
+        call_schema = transformer.transform_abi_call(abi=abi, call_name='AllTypeFunction')[0]
 
         inputs_mapping_by_name: Dict[str, ABIField] = \
             {i.name: i for i in call_schema.inputs}

@@ -112,37 +112,52 @@ class ABITransformer:
                 ftype=self.abi_type_mapping[atype_str],
             )
 
-    def transform_abi_event(self, abi: ABI, event_name: str) -> ABIEventSchema:
+    def transform_abi_event(self, abi: ABI, event_name: str) -> List[ABIEventSchema]:
         candidate_events: List[ABIEvent] = filter_by_type_and_name(name=event_name, type_str='event', contract_abi=abi)
-        if len(candidate_events) != 1:
+
+        if not candidate_events:
             raise TargetItemNotFound(f"{event_name} event can not be found in ABI")
 
-        event = candidate_events[0]
-        return ABIEventSchema(
-            name=event.get('name'),
-            inputs=self._revise_fields([self._transform_event_element(i) for i in event.get('inputs', [])]),
-            raw_schema=event
-        )
+        event_schemas = []
 
-    def transform_abi_call(self, abi: ABI, call_name: str) -> ABICallSchema:
+        for idx, event in enumerate(candidate_events):
+            event_schemas.append(
+                ABIEventSchema(
+                    name=event.get('name') if idx == 0 else event.get('name') + str(idx),
+                    inputs=self._revise_fields([self._transform_event_element(i) for i in event.get('inputs', [])]),
+                    raw_schema=event
+                )
+            )
+
+        return event_schemas
+
+    def transform_abi_call(self, abi: ABI, call_name: str) -> List[ABICallSchema]:
         candidate_calls: List[ABICall] = filter_by_type_and_name(name=call_name, type_str='function', contract_abi=abi)
-        if len(candidate_calls) != 1:
+
+        if not candidate_calls:
             raise TargetItemNotFound(f"{call_name} call can not be found in ABI")
 
-        call = candidate_calls[0]
-        return ABICallSchema(
-            name=call.get('name'),
-            inputs=self._revise_fields([self._transform_call_element(i) for i in call.get('inputs', [])]),
-            outputs=self._revise_fields([self._transform_call_element(i) for i in call.get('outputs', [])], 'output'),
-            raw_schema=call
-        )
+        call_schemas = []
+
+        for idx, call in enumerate(candidate_calls):
+            call_schemas.append(
+                ABICallSchema(
+                    name=call.get('name') if idx == 0 else call.get('name') + str(idx),
+                    inputs=self._revise_fields([self._transform_call_element(i) for i in call.get('inputs', [])]),
+                    outputs=self._revise_fields([self._transform_call_element(i) for i in call.get('outputs', [])],
+                                                'output'),
+                    raw_schema=call
+                )
+            )
+
+        return call_schemas
 
     def transform_abi(self, abi: ABI) -> ABISchema:
-        event_abi_list = filter_by_type(type_str='event', contract_abi=abi)
-        call_abi_list = filter_by_type(type_str='function', contract_abi=abi)
+        event_names = set([i['name'] for i in filter_by_type(type_str='event', contract_abi=abi)])
+        call_names = set(i['name'] for i in filter_by_type(type_str='function', contract_abi=abi))
 
-        events = [self.transform_abi_event(abi, i['name']) for i in event_abi_list]
-        calls = [self.transform_abi_call(abi, i['name']) for i in call_abi_list]
+        events = [item for i in event_names for item in self.transform_abi_event(abi, i)]
+        calls = [item for i in call_names for item in self.transform_abi_call(abi, i)]
         return ABISchema(events=events, calls=calls)
 
     @staticmethod
