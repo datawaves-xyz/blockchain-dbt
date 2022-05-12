@@ -12,6 +12,8 @@ from bdbt.utils import get_partitions
               help='The api keys for moralis, split with commas.')
 @click.option('-ca', '--contract-address', required=True, type=str,
               help='The added NFT contract address, split with commas.')
+@click.option('-op', '--output-prefix', required=True, type=str,
+              help='The prefix for output file.')
 @click.option('-b', '--batch-size', default=100, show_default=True, type=int,
               help='The number of metadata in a file.')
 @click.option('-mw', '--max-workers', default=4, show_default=True, type=int,
@@ -19,11 +21,12 @@ from bdbt.utils import get_partitions
 def export_added_nft_metadata(
         api_keys: str,
         contract_address: str,
+        output_prefix: str,
         batch_size: int = 100,
         max_workers: int = 4
 ) -> None:
-    _api_keys = api_keys.split(',')
-    _address = contract_address.split(',')
+    _api_keys = [i for i in api_keys.split(',') if i]
+    _address = [i for i in contract_address.split(',') if i]
 
     if max_workers > len(_api_keys):
         raise ValueError('the max workers should less than the size of api keys.')
@@ -32,7 +35,7 @@ def export_added_nft_metadata(
 
     for idx, partition in enumerate(get_partitions(_address, batch_size)):
         logging.info(f'start export new partition, {idx * batch_size} to {idx * batch_size + len(partition)}')
-        filename = 'tmp/nft_metadata_{}.csv'.format(idx)
+        filename = 'tmp/{}_{}.csv'.format(output_prefix, idx)
 
         job = ExportNFTMetadataJob(
             collections=partition,
