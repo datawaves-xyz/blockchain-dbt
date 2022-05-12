@@ -17,7 +17,7 @@ def ethereum_codegen(
         dbt_dir: str = Path.cwd(),
         remote_dir_url: str = 's3a://ifcrypto/blockchain-dbt/jars',
         database: str = Database.SPARK.value,
-):
+) -> None:
     database_obj = Database(database)
     generator = DbtGenerator(database=database_obj, remote_dir_url=remote_dir_url, dbt_dir=dbt_dir)
     generator.gen_all()

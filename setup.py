@@ -11,7 +11,7 @@ long_description = read('README.md.md') if os.path.isfile("README.md.md") else "
 
 setup(
     name='blockchain-dbt',
-    version='0.3.12',
+    version='0.4.0',
     author='Datawaves',
     author_email='team@datawaves.xyz',
     description='The schema transformer and dbt utils for blockchain data.',
@@ -33,6 +33,7 @@ setup(
         'ruamel.yaml==0.17.21',
         'eth-utils==1.10.0',
         'click==7.1.2',
+        'backoff==2.0.1',
         'mashumaro==3.0.1'
     ],
     extras_require={
