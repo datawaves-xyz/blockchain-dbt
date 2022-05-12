@@ -5,19 +5,18 @@ import logging
 import os
 import shutil
 from os import listdir
-from typing import Dict, cast, List
+from typing import Dict, List
 
 import pyaml
 import ruamel.yaml
 import yaml
 
-from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_data_type import ABISchema
 from bdbt.ethereum.abi.abi_transformer import ABITransformer
 from bdbt.ethereum.dbt.dbt_code_generator import DbtCodeGenerator as CG
 from bdbt.ethereum.dbt.dbt_factory import DbtFactory
 from bdbt.ethereum.dbt.dbt_schema_generator import DbtSchemaGenerator
-from bdbt.global_type import Database, DbtTable, DbtColumn, DbtModelSchema
+from bdbt.global_type import Database, DbtTable, DbtColumn, DbtModelSchema, Contract
 
 evt_base_column = [
     'evt_block_number',
@@ -70,24 +69,24 @@ class DbtGenerator:
                     project_name=project,
                     contract=contract,
                     version=self.version,
-                    abi=self._transformer.transform_abi(contract['abi'])
+                    abi=self._transformer.transform_abi(contract.abi)
                 )
 
             # Generate schema
             models: List[DbtTable] = []
             for contract in contracts:
-                abi = self._transformer.transform_abi(contract['abi'])
+                abi = self._transformer.transform_abi(contract.abi)
                 for event in abi.events:
                     columns = [DbtColumn(name=i.name) for i in event.inputs]
                     columns.extend(DbtColumn(name=i) for i in evt_base_column)
-                    models.append(DbtTable(name=CG.evt_model_name(contract['name'], event, project),
+                    models.append(DbtTable(name=CG.evt_model_name(contract.name, event, project),
                                            columns=columns))
 
                 for call in abi.calls:
                     columns = [DbtColumn(name=i.name) for i in call.inputs]
                     columns.extend([DbtColumn(name=i.name) for i in call.outputs])
                     columns.extend(DbtColumn(name=i) for i in call_base_column)
-                    models.append(DbtTable(name=CG.call_model_name(contract['name'], call, project),
+                    models.append(DbtTable(name=CG.call_model_name(contract.name, call, project),
                                            columns=columns))
 
             schema = DbtModelSchema(models=models)
@@ -95,7 +94,7 @@ class DbtGenerator:
             with open(schema_path, 'w') as f:
                 # https://docs.getdbt.com/faqs/why-version-2
                 f.write('version: 2\n')
-                f.write(pyaml.dump(schema, sort_dicts=False))
+                f.write(pyaml.dump(schema.to_dict(), sort_dicts=False))
 
             models_count_map[project] = len(models)
 
@@ -111,7 +110,7 @@ class DbtGenerator:
         for project, contracts in self.contracts_map.items():
             abi_map[project] = {}
             for contract in contracts:
-                abi_map[project][contract['name']] = self._transformer.transform_abi(contract['abi'])
+                abi_map[project][contract.name] = self._transformer.transform_abi(contract.abi)
 
         self._codegen.gen_udf_for_dbt(self._dbt_dir, abi_map, self.version)
         self._logger.info('generate a UDF dependency.')
@@ -192,5 +191,5 @@ class DbtGenerator:
                 with open(contract_path, 'r') as f:
                     if project not in contracts_map:
                         contracts_map[project] = []
-                    contracts_map[project].append(cast(Contract, json.loads(f.read())))
+                    contracts_map[project].append(Contract.from_dicts(json.loads(f.read())))
         return contracts_map

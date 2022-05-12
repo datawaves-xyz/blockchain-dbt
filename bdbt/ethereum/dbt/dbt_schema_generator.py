@@ -55,4 +55,4 @@ class DbtSchemaGenerator:
         with open(schema_path, 'w') as f:
             # https://docs.getdbt.com/faqs/why-version-2
             f.write('version: 2\n')
-            f.write(pyaml.dump(schema, sort_dicts=False))
+            f.write(pyaml.dump(schema.to_dict(), sort_dicts=False))

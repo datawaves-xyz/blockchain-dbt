@@ -1,22 +1,25 @@
+from dataclasses import dataclass
 from enum import Enum
-from typing import Sequence, List
+from typing import Sequence, List, Optional, Mapping
 
-try:
-    from typing import TypedDict
-except ImportError:
-    from typing_extensions import TypedDict
+from mashumaro import DataClassDictMixin
+
+from bdbt.ethereum.abi.abi_type import ABI
 
 
-class DbtColumn(TypedDict, total=False):
+@dataclass(frozen=True)
+class DbtColumn(DataClassDictMixin):
     name: str
 
 
-class DbtTable(TypedDict, total=False):
+@dataclass(frozen=True)
+class DbtTable(DataClassDictMixin):
     name: str
     columns: Sequence[DbtColumn]
 
 
-class DbtModelSchema(TypedDict, total=False):
+@dataclass(frozen=True)
+class DbtModelSchema(DataClassDictMixin):
     models: List[DbtTable]
 
 
@@ -26,3 +29,24 @@ class Database(Enum):
     REDSHIFT = 'redshift'
     SNOWFLAKE = 'snowflake'
     POSTGRES = 'postgres'
+
+
+@dataclass(frozen=True)
+class Contract(DataClassDictMixin):
+    abi: ABI
+    name: str
+    # table / increment
+    materialize: str
+    # If the address is null, SQL will match all contracts.
+    address: Optional[str] = None
+
+    @classmethod
+    def from_dicts(
+            cls, d: Mapping,
+    ) -> "Contract":
+        return cls(
+            abi=ABI.from_dicts(d['abi']),
+            name=d['name'],
+            materialize=d['materialize'],
+            address=d.get('address')
+        )

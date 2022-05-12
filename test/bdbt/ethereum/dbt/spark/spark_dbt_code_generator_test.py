@@ -6,10 +6,10 @@ import unittest
 from typing import AnyStr
 
 import test
-from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_transformer import ABITransformer
 from bdbt.ethereum.abi.utils import normalize_abi
 from bdbt.ethereum.dbt.spark.spark_dbt_code_generator import SparkDbtCodeGenerator
+from bdbt.global_type import Contract
 
 RESOURCE_GROUP = 'dbt_test'
 

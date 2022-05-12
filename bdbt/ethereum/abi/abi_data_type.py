@@ -6,12 +6,6 @@ from typing import (
 )
 
 from bdbt.ethereum.abi.abi_type import ABIEvent, ABICall
-
-try:
-    from typing import TypedDict
-except ImportError:
-    from typing_extensions import TypedDict
-
 from bdbt.ethereum.exceptions import ABITypeNotValid
 
 

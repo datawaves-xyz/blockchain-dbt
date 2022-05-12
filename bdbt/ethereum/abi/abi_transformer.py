@@ -54,9 +54,9 @@ class ABITransformer:
     abi_type_mapping['string'] = ABIStringType()
 
     def _transform_event_element(self, event_element: ABIEventElement) -> ABIField:
-        name = event_element.get('name')
-        atype_str = event_element.get('type')
-        indexed = event_element.get('indexed')
+        name = event_element.name
+        atype_str = event_element.type
+        indexed = event_element.indexed
 
         arr_reg = re.search(r'\[[\d]*\]$', atype_str)
 
@@ -82,9 +82,9 @@ class ABITransformer:
             )
 
     def _transform_call_element(self, function_element: ABICallElement) -> ABIField:
-        name = function_element.get('name')
-        atype_str = function_element.get('type')
-        components = function_element.get('components')
+        name = function_element.name
+        atype_str = function_element.type
+        components = function_element.components
 
         arr_reg = re.search(r'\[[\d]*\]$', atype_str)
 
@@ -123,8 +123,8 @@ class ABITransformer:
         for idx, event in enumerate(candidate_events):
             event_schemas.append(
                 ABIEventSchema(
-                    name=event.get('name') if idx == 0 else event.get('name') + str(idx),
-                    inputs=self._revise_fields([self._transform_event_element(i) for i in event.get('inputs', [])]),
+                    name=event.name if idx == 0 else event.name + str(idx),
+                    inputs=self._revise_fields([self._transform_event_element(i) for i in event.inputs]),
                     raw_schema=event
                 )
             )
@@ -142,10 +142,9 @@ class ABITransformer:
         for idx, call in enumerate(candidate_calls):
             call_schemas.append(
                 ABICallSchema(
-                    name=call.get('name') if idx == 0 else call.get('name') + str(idx),
-                    inputs=self._revise_fields([self._transform_call_element(i) for i in call.get('inputs', [])]),
-                    outputs=self._revise_fields([self._transform_call_element(i) for i in call.get('outputs', [])],
-                                                'output'),
+                    name=call.name if idx == 0 else call.name + str(idx),
+                    inputs=self._revise_fields([self._transform_call_element(i) for i in call.inputs]),
+                    outputs=self._revise_fields([self._transform_call_element(i) for i in call.outputs], 'output'),
                     raw_schema=call
                 )
             )
@@ -153,8 +152,8 @@ class ABITransformer:
         return call_schemas
 
     def transform_abi(self, abi: ABI) -> ABISchema:
-        event_names = set([i['name'] for i in filter_by_type(type_str='event', contract_abi=abi)])
-        call_names = set(i['name'] for i in filter_by_type(type_str='function', contract_abi=abi))
+        event_names = set([i.name for i in filter_by_type(type_str='event', contract_abi=abi)])
+        call_names = set(i.name for i in filter_by_type(type_str='function', contract_abi=abi))
 
         events = [item for i in event_names for item in self.transform_abi_event(abi, i)]
         calls = [item for i in call_names for item in self.transform_abi_call(abi, i)]

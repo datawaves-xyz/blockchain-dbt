@@ -3,8 +3,8 @@ import os.path
 import pathlib
 from typing import Dict, Optional
 
-from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_data_type import ABISchema, ABIEventSchema, ABICallSchema
+from bdbt.global_type import Contract
 
 
 class DbtCodeGenerator:

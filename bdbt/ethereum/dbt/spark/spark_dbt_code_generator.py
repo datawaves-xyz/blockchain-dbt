@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import os.path
 import pathlib
@@ -6,10 +7,10 @@ import xml.etree.ElementTree as ET
 
 from eth_utils import event_abi_to_log_topic, encode_hex, function_abi_to_4byte_selector
 
-from bdbt.content import Contract
 from bdbt.ethereum.abi.abi_data_type import ABIEventSchema, ABICallSchema
 from bdbt.ethereum.abi.provider.hive_object_inspector_type_provider import HiveObjectInspectorTypeProvider
 from bdbt.ethereum.dbt.dbt_code_generator import DbtCodeGenerator
+from bdbt.global_type import Contract
 
 event_clazz_template = """package io.iftech.sparkudf.hive;
 
@@ -221,8 +222,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             version: str,
             event: ABIEventSchema
     ) -> None:
-        contract_name = contract['name']
-        contract_materialize = contract['materialize']
+        contract_name = contract.name
+        contract_materialize = contract.materialize
 
         project_name = pathlib.Path(project_path).name
         filepath = os.path.join(project_path, self.evt_model_name(contract_name, event, project_name) + '.sql')
@@ -239,7 +240,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
                 .replace('{{UDF_JAR_PATH}}', os.path.join(self.remote_workspace, self._jar_name(version))) \
-                .replace('{{EVENT_ABI}}', json.dumps(event.raw_schema)) \
+                .replace('{{EVENT_ABI}}', json.dumps(event.raw_schema.to_dict(omit_none=True))) \
                 .replace('{{EVENT_NAME}}', event.name) \
                 .replace('{{SELECT_CONDITION}}', self._select_evt_condition(contract, event)) \
                 .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
@@ -255,8 +256,8 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             version: str,
             call: ABICallSchema
     ) -> None:
-        contract_name = contract['name']
-        contract_materialize = contract['materialize']
+        contract_name = contract.name
+        contract_materialize = contract.materialize
 
         project_name = pathlib.Path(project_path).name
         filepath = os.path.join(project_path, self.call_model_name(contract_name, call, project_name) + '.sql')
@@ -273,7 +274,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{UDF_NAME}}', clazz_name.lower()) \
                 .replace('{{CLASS_NAME}}', clazz_name) \
                 .replace('{{UDF_JAR_PATH}}', os.path.join(self.remote_workspace, self._jar_name(version))) \
-                .replace('{{CALL_ABI}}', json.dumps(call.raw_schema)) \
+                .replace('{{CALL_ABI}}', json.dumps(call.raw_schema.to_dict(omit_none=True))) \
                 .replace('{{CALL_NAME}}', call.name) \
                 .replace('{{SELECT_CONDITION}}', self._select_call_condition(contract, call)) \
                 .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
@@ -416,12 +417,12 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
     @staticmethod
     def _select_call_condition(contract: Contract, call: ABICallSchema) -> str:
         conditions = []
-        if 'address' in contract and contract['address'] is not None:
+        if contract.address:
             conditions.append(
-                f"""to_address = lower("{contract['address']}") and address_hash = abs(hash(lower("{contract['address']}"))) % 10"""
+                f"""to_address = lower("{contract.address}") and address_hash = abs(hash(lower("{contract.address}"))) % 10"""
             )
 
-        selector = encode_hex(function_abi_to_4byte_selector(call.raw_schema))[0:10]
+        selector = encode_hex(function_abi_to_4byte_selector(dataclasses.asdict(call.raw_schema)))[0:10]
         conditions.append(
             f"""selector = "{selector}" and selector_hash = abs(hash("{selector}")) % 10"""
         )
@@ -431,12 +432,12 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
     @staticmethod
     def _select_evt_condition(contract: Contract, evt: ABIEventSchema) -> str:
         conditions = []
-        if 'address' in contract and contract['address'] is not None:
+        if contract.address:
             conditions.append(
-                f"""address = lower("{contract['address']}") and address_hash = abs(hash(lower("{contract['address']}"))) % 10"""
+                f"""address = lower("{contract.address}") and address_hash = abs(hash(lower("{contract.address}"))) % 10"""
             )
 
-        selector = encode_hex(event_abi_to_log_topic(evt.raw_schema))
+        selector = encode_hex(event_abi_to_log_topic(dataclasses.asdict(evt.raw_schema)))
         conditions.append(
             f"""selector = "{selector}" and selector_hash = abs(hash("{selector}")) % 10"""
         )

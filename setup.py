@@ -33,6 +33,7 @@ setup(
         'ruamel.yaml==0.17.21',
         'eth-utils==1.10.0',
         'click==7.1.2',
+        'mashumaro==3.0.1'
     ],
     extras_require={
         'dev': [
