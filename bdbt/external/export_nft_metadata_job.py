@@ -19,7 +19,7 @@ class Collection(DataClassDictMixin):
 class ExportNFTMetadataJob:
     def __init__(
             self,
-            collections: List[Collection],
+            addresses: List[str],
             api_keys: List[str],
             filename: str,
             max_workers: Optional[int] = None,
@@ -27,7 +27,7 @@ class ExportNFTMetadataJob:
         if max_workers is None:
             max_workers = len(api_keys)
 
-        self.collections = collections
+        self.addresses = addresses
         self.api_keys = api_keys
         self.executor = BatchWorkExecutor(
             batch_size=1,
@@ -50,19 +50,19 @@ class ExportNFTMetadataJob:
         self.client = Moralis(host='https://deep-index.moralis.io/api/v2')
 
     def run(self) -> None:
-        items = [(collection, self.api_keys[idx % len(self.api_keys)])
-                 for idx, collection in enumerate(self.collections)]
+        items = [(address, self.api_keys[idx % len(self.api_keys)])
+                 for idx, address in enumerate(self.addresses)]
 
         self.executor.execute(
             work_iterable=items,
             work_handler=self._export_single_metadata,
-            total_items=len(self.collections)
+            total_items=len(self.addresses)
         )
 
     def _export_single_metadata(
-            self, items: List[Tuple[Collection, str]]
+            self, items: List[Tuple[str, str]]
     ) -> None:
-        for collection, api_key in items:
-            res = self.client.drink_up_single_token_metadata(collection.contract_address, api_key)
+        for address, api_key in items:
+            res = self.client.drink_up_single_token_metadata(address, api_key)
             for item in res:
                 self.exporter.export_item(item)

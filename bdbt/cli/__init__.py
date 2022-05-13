@@ -9,7 +9,7 @@ logging_basic_config()
 
 
 @click.group()
-@click.version_option
+@click.version_option()
 @click.pass_context
 def cli(ctx):
     pass

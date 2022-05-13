@@ -50,16 +50,16 @@ def export_all_nft_metadata(
     if max_workers > len(keys):
         raise ValueError('the max workers should less than the size of api keys.')
 
-    collections = []
+    addresses = []
     with open(whitelist, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            collections.append(Collection.from_dict(row))
+            addresses.append(Collection.from_dict(row).contract_address)
 
     cached_partition_number = load_breaking_point()
     logging.info(f'restart to export all nft metadata, the current breaking point is {cached_partition_number}')
 
-    for idx, partition in enumerate(get_partitions(collections, batch_size)):
+    for idx, partition in enumerate(get_partitions(addresses, batch_size)):
         if idx <= cached_partition_number:
             continue
 
@@ -67,7 +67,7 @@ def export_all_nft_metadata(
         filename = 'tmp/nft_metadata_{}.csv'.format(idx)
 
         job = ExportNFTMetadataJob(
-            collections=partition,
+            addresses=partition,
             api_keys=keys,
             filename=filename,
             max_workers=max_workers

@@ -26,19 +26,19 @@ def export_added_nft_metadata(
         max_workers: int = 4
 ) -> None:
     _api_keys = [i for i in api_keys.split(',') if i]
-    _address = [i for i in contract_address.split(',') if i]
+    _addresses = [i for i in contract_address.split(',') if i]
 
     if max_workers > len(_api_keys):
         raise ValueError('the max workers should less than the size of api keys.')
 
-    logging.info(f'there are {len(_address)} need to be sync.')
+    logging.info(f'there are {len(_addresses)} need to be sync.')
 
-    for idx, partition in enumerate(get_partitions(_address, batch_size)):
+    for idx, partition in enumerate(get_partitions(_addresses, batch_size)):
         logging.info(f'start export new partition, {idx * batch_size} to {idx * batch_size + len(partition)}')
         filename = 'tmp/{}_{}.csv'.format(output_prefix, idx)
 
         job = ExportNFTMetadataJob(
-            collections=partition,
+            addresses=partition,
             api_keys=_api_keys,
             filename=filename,
             max_workers=max_workers
