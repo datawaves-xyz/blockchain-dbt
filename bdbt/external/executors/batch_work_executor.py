@@ -41,7 +41,7 @@ class BatchWorkExecutor:
     ) -> None:
         self.progress_logger.start(total_items=total_items)
         for batch in self._batch_iterator(work_iterable):
-            self.executor.submit(self._execute_handler_with_progress, work_handler, batch)
+            future = self.executor.submit(self._execute_handler_with_progress, work_handler, batch)
 
     def _execute_handler_with_progress(
             self, work_handler: Callable, batch: list

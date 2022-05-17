@@ -1,9 +1,13 @@
+import logging
+import os
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
 
+import pyarrow.parquet as pq
 from mashumaro import DataClassDictMixin
+from pyarrow import json as pjson
 
-from bdbt.exporter import CsvItemExporter
+from bdbt.exporter import JsonItemExporter
 from bdbt.external.clients.moralis import Moralis
 from bdbt.external.executors.batch_work_executor import BatchWorkExecutor
 
@@ -23,6 +27,7 @@ class ExportNFTMetadataJob:
             api_keys: List[str],
             filename: str,
             max_workers: Optional[int] = None,
+            to_parquet: bool = True
     ) -> None:
         if max_workers is None:
             max_workers = len(api_keys)
@@ -34,20 +39,11 @@ class ExportNFTMetadataJob:
             max_workers=max_workers,
             log_item_step=20,
         )
-        self.exporter = CsvItemExporter(filename=filename, headers=[
-            'token_address',
-            'token_id',
-            'amount',
-            'token_hash',
-            'block_number_minted',
-            'contract_type',
-            'name',
-            'symbol',
-            'token_uri',
-            'metadata',
-            'synced_at'
-        ])
+        self.filename = filename
+        self.to_parquet = to_parquet
+        self.exporter = JsonItemExporter(filename=filename)
         self.client = Moralis(host='https://deep-index.moralis.io/api/v2')
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def run(self) -> None:
         items = [(address, self.api_keys[idx % len(self.api_keys)])
@@ -58,6 +54,17 @@ class ExportNFTMetadataJob:
             work_handler=self._export_single_metadata,
             total_items=len(self.addresses)
         )
+
+    def end(self) -> None:
+        self.executor.shutdown()
+
+        if self.to_parquet:
+            try:
+                table = pjson.read_json(self.filename)
+                pq.write_table(table, self.filename.replace('json', 'parquet'))
+                os.remove(self.filename)
+            except Exception as e:
+                self.logger.error(f"can't transform json to parquet, file: {self.filename}, error: {e}")
 
     def _export_single_metadata(
             self, items: List[Tuple[str, str]]

@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import threading
 from typing import Any, Dict, List
 
@@ -38,3 +39,13 @@ class CsvItemExporter:
                     self._headers_not_written = False
 
         self.csv_writer.writerow(item)
+
+
+class JsonItemExporter:
+    def __init__(
+            self, filename: str
+    ) -> None:
+        self.file = get_file_handle(filename, binary=False)
+
+    def export_item(self, item: Dict[str, Any]) -> None:
+        self.file.write(json.dumps(item) + '\n')

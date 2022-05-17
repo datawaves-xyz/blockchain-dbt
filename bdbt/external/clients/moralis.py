@@ -1,5 +1,7 @@
+import json
 import logging
 import time
+from json import JSONDecodeError
 from typing import Optional, Dict, List
 
 from requests import RequestException
@@ -28,8 +30,16 @@ class Moralis:
                 self.logger.info(f'the total of {address} more than {self.max_tokens}, skip it')
                 return []
 
+            for data in res['result']:
+                data['attributes'] = self._get_attributes(data.get('metadata')) \
+                    if data.get('metadata') is not None else []
+
+                del data['metadata']
+                del data['last_token_uri_sync']
+                del data['last_metadata_sync']
+                results.append(data)
+
             cursor = res['cursor']
-            results.extend(res['result'])
             self.logger.debug(len(results))
             time.sleep(1)
 
@@ -61,3 +71,40 @@ class Moralis:
             raise RequestException(log_msg)
 
         return res.json()
+
+    @staticmethod
+    def _get_attributes(metadata_str: Optional[str]) -> List[Dict[str, any]]:
+        attributes = []
+
+        # handle error json format
+        if metadata_str.startswith('{"trait_type":') or metadata_str.startswith('{"value":'):
+            metadata_str = '{"attribute":[' + metadata_str + ']}'
+
+        try:
+            metadata = json.loads(metadata_str)
+            attribute_raw = metadata.get('attributes')
+
+            if attribute_raw is None or len(attribute_raw) == 0:
+                return attributes
+
+            if type(attribute_raw) == dict:
+                attribute_raw = [{
+                    'trait_type': k,
+                    'value': v
+                } for k, v in attribute_raw.items()]
+
+            if type(attribute_raw) != list:
+                return attributes
+
+            item = attribute_raw[0]
+            if 'trait_type' not in item or 'value' not in item:
+                return attributes
+
+            attributes = [{
+                'trait_type': str(i.get('trait_type')),
+                'value': str(i.get('value'))
+            } for i in attribute_raw if i is not None and type(i) == dict]
+            return attributes
+        except JSONDecodeError as e:
+            logging.warning(f"can't load json str, metadata_str: {metadata_str}, error: {e}")
+            return []

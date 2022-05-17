@@ -1,7 +1,6 @@
 import csv
 import logging
 import os
-import time
 
 import click as click
 
@@ -43,8 +42,14 @@ def load_breaking_point() -> int:
               help='The number of metadata in a file.')
 @click.option('-mw', '--max-workers', default=4, show_default=True, type=int,
               help='The maximum number of exporting nft metadata workers.')
+@click.option('-p', '--to-parquet', default=True, show_default=True, type=bool,
+              help='Transform the result file to parquet.')
 def export_all_nft_metadata(
-        api_keys: str, whitelist: str, batch_size: int = 100, max_workers: int = 4
+        api_keys: str,
+        whitelist: str,
+        batch_size: int = 100,
+        max_workers: int = 4,
+        to_parquet: bool = True
 ) -> None:
     keys = api_keys.split(',')
     if max_workers > len(keys):
@@ -64,14 +69,17 @@ def export_all_nft_metadata(
             continue
 
         logging.info(f'start export new partition, {idx * batch_size} to {idx * batch_size + len(partition)}')
-        filename = 'tmp/nft_metadata_{}.csv'.format(idx)
+        filename = 'tmp/nft_metadata_{}.json'.format(idx)
 
         job = ExportNFTMetadataJob(
             addresses=partition,
             api_keys=keys,
             filename=filename,
-            max_workers=max_workers
+            max_workers=max_workers,
+            to_parquet=to_parquet
         )
 
-        job.run()
-        time.sleep(60)
+        try:
+            job.run()
+        finally:
+            job.end()

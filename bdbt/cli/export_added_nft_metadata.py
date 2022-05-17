@@ -1,5 +1,4 @@
 import logging
-import time
 
 import click
 
@@ -18,12 +17,15 @@ from bdbt.utils import get_partitions
               help='The number of metadata in a file.')
 @click.option('-mw', '--max-workers', default=4, show_default=True, type=int,
               help='The maximum number of exporting nft metadata workers.')
+@click.option('-p', '--to-parquet', default=True, show_default=True, type=bool,
+              help='Transform the result file to parquet.')
 def export_added_nft_metadata(
         api_keys: str,
         contract_address: str,
         output_prefix: str,
         batch_size: int = 100,
-        max_workers: int = 4
+        max_workers: int = 4,
+        to_parquet: bool = True
 ) -> None:
     _api_keys = [i for i in api_keys.split(',') if i]
     _addresses = [i for i in contract_address.split(',') if i]
@@ -35,14 +37,17 @@ def export_added_nft_metadata(
 
     for idx, partition in enumerate(get_partitions(_addresses, batch_size)):
         logging.info(f'start export new partition, {idx * batch_size} to {idx * batch_size + len(partition)}')
-        filename = 'tmp/{}_{}.csv'.format(output_prefix, idx)
+        filename = 'tmp/{}_{}.json'.format(output_prefix, idx)
 
         job = ExportNFTMetadataJob(
             addresses=partition,
             api_keys=_api_keys,
             filename=filename,
-            max_workers=max_workers
+            max_workers=max_workers,
+            to_parquet=to_parquet
         )
 
-        job.run()
-        time.sleep(60)
+        try:
+            job.run()
+        finally:
+            job.end()
