@@ -11,7 +11,7 @@ long_description = read('README.md.md') if os.path.isfile("README.md.md") else "
 
 setup(
     name='blockchain-dbt',
-    version='0.4.3',
+    version='0.4.4',
     author='Datawaves',
     author_email='team@datawaves.xyz',
     description='The schema transformer and dbt utils for blockchain data.',
