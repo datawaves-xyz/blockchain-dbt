@@ -34,7 +34,7 @@ final as (
         evt_tx_hash,
         contract_address,
         dt,
-        data.input.*
+        data.input.hash as hash, data.input.exchange as exchange, data.input.maker as maker, data.input.taker as taker, data.input.makerrelayerfee as makerRelayerFee, data.input.takerrelayerfee as takerRelayerFee, data.input.makerprotocolfee as makerProtocolFee, data.input.takerprotocolfee as takerProtocolFee, data.input.feerecipient as feeRecipient, data.input.feemethod as feeMethod, data.input.side as side, data.input.salekind as saleKind, data.input.target as target
     from base
 )
 

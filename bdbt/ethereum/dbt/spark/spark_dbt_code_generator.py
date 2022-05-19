@@ -125,7 +125,7 @@ final as (
         evt_tx_hash,
         contract_address,
         dt,
-        data.input.*
+        {{INPUT_FIELDS}}
     from base
 )
 
@@ -195,8 +195,7 @@ final as (
         call_tx_hash,
         contract_address,
         dt,
-        data.input.*,
-        data.output.*
+        {{INPUT_AND_OUTPUT_FIELDS}}
     from base
 )
 
@@ -230,7 +229,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         if event.is_empty:
             content = event_dbt_model_sql_template \
-                .replace('{{SELECT_CONDITION}}', self._select_evt_condition(contract, event)) \
+                .replace('{{SELECT_CONDITION}}', self._evt_condition_selector(contract, event)) \
                 .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
                 .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
@@ -242,10 +241,11 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{UDF_JAR_PATH}}', os.path.join(self.remote_workspace, self._jar_name(version))) \
                 .replace('{{EVENT_ABI}}', json.dumps(event.raw_schema.to_dict(omit_none=True))) \
                 .replace('{{EVENT_NAME}}', event.name) \
-                .replace('{{SELECT_CONDITION}}', self._select_evt_condition(contract, event)) \
+                .replace('{{SELECT_CONDITION}}', self._evt_condition_selector(contract, event)) \
                 .replace('{{MODEL_ALIAS}}', self.evt_model_name(contract_name, event).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
-                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
+                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize)) \
+                .replace('{{INPUT_FIELDS}}', self._evt_original_field_selector(event))
 
         self.create_file_and_write(filepath, content)
 
@@ -264,7 +264,7 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
 
         if call.is_empty:
             content = empty_call_dbt_model_sql_template \
-                .replace('{{SELECT_CONDITION}}', self._select_call_condition(contract, call)) \
+                .replace('{{SELECT_CONDITION}}', self._call_condition_selector(contract, call)) \
                 .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
                 .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
@@ -276,10 +276,11 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
                 .replace('{{UDF_JAR_PATH}}', os.path.join(self.remote_workspace, self._jar_name(version))) \
                 .replace('{{CALL_ABI}}', json.dumps(call.raw_schema.to_dict(omit_none=True))) \
                 .replace('{{CALL_NAME}}', call.name) \
-                .replace('{{SELECT_CONDITION}}', self._select_call_condition(contract, call)) \
+                .replace('{{SELECT_CONDITION}}', self._call_condition_selector(contract, call)) \
                 .replace('{{MODEL_ALIAS}}', self.call_model_name(contract_name, call).lower()) \
                 .replace('{{MODEL_MATERIALIZED_CONFIG}}', self._materialized_config(contract_materialize)) \
-                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize))
+                .replace('{{MODEL_REPARTITION_COUNT}}', self._repartition_count(contract_materialize)) \
+                .replace('{{INPUT_AND_OUTPUT_FIELDS}}', self._call_original_field_selector(call))
 
         self.create_file_and_write(filepath, content)
 
@@ -415,7 +416,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
             raise ValueError(f'{materialize} isnt a supported materialized model.')
 
     @staticmethod
-    def _select_call_condition(contract: Contract, call: ABICallSchema) -> str:
+    def _call_condition_selector(
+            contract: Contract, call: ABICallSchema
+    ) -> str:
         conditions = []
         if contract.address:
             conditions.append(
@@ -430,7 +433,9 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         return ' and '.join(conditions)
 
     @staticmethod
-    def _select_evt_condition(contract: Contract, evt: ABIEventSchema) -> str:
+    def _evt_condition_selector(
+            contract: Contract, evt: ABIEventSchema
+    ) -> str:
         conditions = []
         if contract.address:
             conditions.append(
@@ -443,3 +448,19 @@ class SparkDbtCodeGenerator(DbtCodeGenerator):
         )
 
         return ' and '.join(conditions)
+
+    @staticmethod
+    def _evt_original_field_selector(
+            evt: ABIEventSchema, prefix: str = 'data.input.'
+    ) -> str:
+        """Hive is a case-insensitive engine, the field names of the results from it are lower case,
+        so we need to transform them to their original case.
+        """
+        return ', '.join([f'{prefix + i.name.lower()} as {i.name}' for i in evt.inputs])
+
+    @staticmethod
+    def _call_original_field_selector(
+            call: ABICallSchema, input_prefix: str = 'data.input.', output_prefix: str = 'data.output.'
+    ) -> str:
+        return ', '.join([f'{input_prefix + i.name.lower()} as {i.name}' for i in call.inputs] +
+                         [f'{output_prefix + i.name.lower()} as {i.name}' for i in call.outputs])
